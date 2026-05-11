@@ -44,7 +44,7 @@ body{
 .search-bar input{
     width:80%;
     padding:18px;
-    border:4 px solid #ff00ff;
+    border:4px solid #ff00ff;
     border-radius:25px;
     font-size:22px;
     background:#2a2a2a;
@@ -105,4 +105,47 @@ body{
     color:white;
     cursor:pointer;
     margin:0 10px;
+}
+/* Smooth transitions */
+.album-card{
+    transition: transform 0.3s ease,box-shadow 0.3s ease,background 0.3s ease,color 0.3s ease;
+}
+.song-card{
+    transition: transform 0.3s ease,box-shadow 0.3s ease,background 0.3s ease,color 0.3s ease;
+}.sidebar li{
+    transition: transform 0.3s ease,box-shadow 0.3s ease,background 0.3s ease,color 0.3s ease;
+}.controls button{
+    transition: transform 0.3s ease,box-shadow 0.3s ease,background 0.3s ease,color 0.3s ease;
+}.search-bar input{
+    transition: transform 0.3s ease,box-shadow 0.3s ease,background 0.3s ease,color 0.3s ease;
+}
+.album-card:hover{
+    transform:translateY(-10px) scale(1.08);
+    box-shadow:0 15px 30px rgba(255,0,255,0.5);
+    cursor:pointer;
+}
+.song-card:hover{
+    transform:translateY(-5px) scale(1.03);
+    background:#2d2d50;
+    box-shadow:0 10px 25px rgba(255,0,255,0.35);
+    cursor:pointer;
+}
+.sidebar li:hover{
+    color:white;
+    transform:translateX(8px);
+    text-shadow:0 0 10px #ff00ff;
+}
+.controls button:hover{
+    transform:scale(1.25);
+    color:#ff4dff;
+    text-shadow: 0 0 10px #ff00ff;
+}
+.search-bar input:hover{
+  box-shadow:0 0 20px rgba(255,0,255,0.4);
+}
+
+.search-bar input:focus{
+    outline:none;
+    box-shadow:0 0 25px rgba(255,0,255,0.7);
+    transform:scale(1.01);
 }
