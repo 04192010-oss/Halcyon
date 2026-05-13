@@ -1,6 +1,7 @@
 const fileInput = document.getElementById("fileInput");
 const albumRow = document.getElementById("albumRow");
 const songRow = document.getElementById("songRow");
+const searchInput = document.getElementById("searchInput");
 
 const audioPlayer = document.getElementById("audioPlayer");
 const playBtn = document.getElementById("PlayBtn");
@@ -28,15 +29,9 @@ function formatTime(seconds) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+
 fileInput.addEventListener("change", (event) => {
     const files = event.target.files;
-    
-    // Reset
-    Object.keys(albums).forEach(key => delete albums[key]);
-    allSongs = [];
-    albumRow.innerHTML = "";
-    songRow.innerHTML = "";
-
     let processed = 0;
     const audioFiles = Array.from(files).filter(f => f.type.startsWith("audio/"));
 
@@ -58,17 +53,15 @@ fileInput.addEventListener("change", (event) => {
 
                 const song = { title, artist, album: albumName, file, imageUrl };
 
+                // Add to library without clearing old songs
                 if (!albums[albumName]) albums[albumName] = [];
                 albums[albumName].push(song);
                 allSongs.push(song);
 
                 processed++;
-
                 if (processed === audioFiles.length) {
                     renderAlbums();
                     renderAllSongs();
-                    currentSongs = allSongs;
-                    playSong(0);
                 }
             },
             onError: (err) => {
@@ -78,6 +71,7 @@ fileInput.addEventListener("change", (event) => {
         });
     });
 });
+
 
 function renderAlbums() {
     albumRow.innerHTML = "";
@@ -98,9 +92,9 @@ function renderAlbums() {
     });
 }
 
-function renderAllSongs() {
+function renderAllSongs(filteredSongs = allSongs) {
     songRow.innerHTML = "";
-    allSongs.forEach((song, index) => {
+    filteredSongs.forEach((song, index) => {
         const card = document.createElement("div");
         card.className = "song-card";
         card.innerHTML = `
@@ -111,7 +105,7 @@ function renderAllSongs() {
             </div>
         `;
         card.onclick = () => {
-            currentSongs = allSongs;
+            currentSongs = filteredSongs;
             playSong(index);
         };
         songRow.appendChild(card);
@@ -134,11 +128,18 @@ function playSong(index) {
     audioPlayer.play().catch(err => {
         console.error(err);
         if (song.file.name.toLowerCase().endsWith('.flac')) {
-            alert("FLAC file could not play.\n\nTry using Google Chrome or convert to MP3.");
+            alert("FLAC playback failed.\nTry Chrome or convert to MP3.");
         }
     });
 
     playBtn.textContent = "⏸";
+    highlightCurrentSong();
+}
+
+function highlightCurrentSong() {
+    document.querySelectorAll(".song-card").forEach((card, i) => {
+        card.classList.toggle("playing", i === currentIndex);
+    });
 }
 
 
@@ -173,4 +174,22 @@ volumeSlider.addEventListener("input", () => {
 
 audioPlayer.addEventListener("ended", () => {
     playSong(currentIndex + 1);
+});
+
+
+searchInput.addEventListener("input", () => {
+    const term = searchInput.value.toLowerCase().trim();
+    
+    if (term === "") {
+        renderAllSongs(allSongs);
+        return;
+    }
+
+    const filtered = allSongs.filter(song => 
+        song.title.toLowerCase().includes(term) || 
+        song.artist.toLowerCase().includes(term) ||
+        song.album.toLowerCase().includes(term)
+    );
+
+    renderAllSongs(filtered);
 });
