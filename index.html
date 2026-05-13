@@ -1,74 +1,87 @@
 <!DOCTYPE html>
-<html>
-  <head>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Halcyon</title>
-    <link rel="stylesheet"href="styles.css">
-  </head>
-
-  <body>
+    <link rel="icon" type="image/png" href="images/halycon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
     <div class="container">
 
-        <!-- SIDEBAR -->
         <aside class="sidebar">
-
-            <h2>SIDEBAR</h2>
-
+            <h2>Halcyon</h2>
             <ul>
                 <li>Home</li>
                 <li>Recent</li>
                 <li>Library</li>
                 <li>Settings</li>
             </ul>
-
         </aside>
-        <!--Main Content-->
+
+        
         <main class="main-content">
-        <div class="folder-picker">
-            <input type="file" id="folderInput"webkitdirectory multiple accept="audio/*">
-        </div>
-            <!--Search-->
-            <div class="search-bar">
-                <input type="text" placeholder="Search Library...">
+            
+           
+            <div class="file-picker">
+                <label for="fileInput" class="file-label">
+                    🎵 Select Music Files (MP3, FLAC, etc.)
+                </label>
+                <input type="file" id="fileInput" multiple accept="audio/*">
             </div>
-            <!--Album section-->
+
+            
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search songs...">
+            </div>
+
+        
             <section class="albums">
                 <h2>Your Albums</h2>
-                <div class="album-row">
-                    <div class="album-card"></div>
-                    <div class="album-card"></div>
-                    <div class="album-card"></div>
-                    <div class="album-card"></div>
-                    <div class="album-card"></div>
-                </div>
+                <div id="albumRow" class="album-row"></div>
             </section>
-            <!--REcommended songs-->
+
+            <!-- Songs -->
             <section class="recommended-songs">
-                <h2>Recommended Songs</h2>
-                <div class="song-row">
-                 <div class="song-card">
-                    Song 1
-                 </div>
-                 <div class="song-card">
-                    Song 2
-                 </div>
-                </div>
+                <h2 id="songSectionTitle">All Songs</h2>
+                <div id="songRow" class="song-row"></div>
             </section>
-            <!--Music player-->
-            <footer class="player">
-                <div class="song-info"> 
-                    Song Title
-                </div>
-                <div class="controls">
-                    <button>⏮</button>
-                    <button>▶</button>
-                    <button>⏭</button>
-                </div>
-            </footer>
         </main>
     </div>
+
+    <footer class="player">
+        <div class="song-info">
+            <img id="playerArt" src="https://via.placeholder.com/80" alt="Album Art">
+            <div>
+                <div id="currentTitle" class="title">No song playing</div>
+                <div id="currentArtist" class="artist">Select music files to begin</div>
+            </div>
+        </div>
+
+        <div class="controls-container">
+            <div class="controls">
+                <button id="prevBtn">⏮</button>
+                <button id="PlayBtn">▶</button>
+                <button id="nextBtn">⏭</button>
+            </div>
+
+            <div class="progress-area">
+                <span id="currentTime">0:00</span>
+                <input type="range" id="progressBar" value="0" min="0" max="100">
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" id="volumeSlider" value="1" min="0" max="1" step="0.01">
+        </div>
+    </footer>
+
+    <audio id="audioPlayer"></audio>
+
     <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
     <script src="index.js"></script>
- </body>
+</body>
 </html>
