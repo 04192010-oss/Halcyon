@@ -4,22 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Halcyon</title>
-    <link rel="icon" type="image/png" href="images/halycon.png">
+    <link rel="icon" type="image/png" href="images/halcyon.webp">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-
-        <aside class="sidebar">
-            <h2>Halcyon</h2>
-            <ul>
-                <li>Home</li>
-                <li>Recent</li>
-                <li>Library</li>
-                <li>Settings</li>
-            </ul>
-        </aside>
-
+       <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h2>Halcyon</h2>
+        <button id="toggleSidebar" class="toggle-btn">☰</button>
+    </div>
+    <ul>
+        <li data-icon="🏠"><span>Home</span></li>
+        <li data-icon="🕒"><span>Recent</span></li>
+        <li data-icon="📚"><span>Library</span></li>
+        <li data-icon="⚙️"><span>Settings</span></li>
+    </ul>
+</aside>
         
         <main class="main-content">
             
@@ -30,6 +31,12 @@
                 </label>
                 <input type="file" id="fileInput" multiple accept="audio/*">
             </div>
+            <!-- Add this after the file-picker div -->
+            <div style="margin-bottom: 20px;">
+             <button id="clearLibraryBtn" class="clear-btn">
+              🗑️ Clear All Music
+               </button>
+</div>
 
             
             <div class="search-bar">
@@ -77,6 +84,48 @@
             <span>🔊</span>
             <input type="range" id="volumeSlider" value="1" min="0" max="1" step="0.01">
         </div>
+        <!-- Fullscreen Now Playing -->
+<div id="nowPlayingScreen" class="now-playing hidden">
+
+    <div class="np-background"></div>
+
+    <button id="closeNowPlaying" class="close-btn">✕</button>
+
+    <div class="np-content">
+
+        <!-- LEFT -->
+        <div class="np-left">
+
+            <div class="vinyl-wrapper">
+                <div class="vinyl"></div>
+
+                <img id="npArt" src="" class="np-art">
+            </div>
+
+            <h1 id="npTitle">Song Name</h1>
+            <h3 id="npArtist">Artist</h3>
+
+            <div class="np-controls">
+                <button>⏮</button>
+                <button id="npPlayBtn">⏸</button>
+                <button>⏭</button>
+            </div>
+
+            <input type="range" id="npProgress">
+
+        </div>
+
+        <!-- RIGHT -->
+        <div class="lyrics-panel">
+            <div class="lyrics">
+                <p>eyes and their words are really clear</p>
+                <p class="active">So beat it, just beat it</p>
+                <p>You better run, you better do what you can</p>
+            </div>
+        </div>
+
+    </div>
+</div>
     </footer>
 
     <audio id="audioPlayer"></audio>
