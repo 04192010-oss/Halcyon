@@ -6,6 +6,8 @@
     <title>Halcyon</title>
     <link rel="icon" type="image/png" href="images/halcyon.webp">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
 </head>
 <body>
     <div class="container">
@@ -15,10 +17,22 @@
         <button id="toggleSidebar" class="toggle-btn">☰</button>
     </div>
     <ul>
-        <li data-icon="🏠"><span>Home</span></li>
-        <li data-icon="🕒"><span>Recent</span></li>
-        <li data-icon="📚"><span>Library</span></li>
-        <li data-icon="⚙️"><span>Settings</span></li>
+        <li>
+          <i class="fi fi-sr-home"></i>
+          <span>Home</span>
+        </li>
+        <li> 
+            <i class="fi fi-rr-clock-three"></i></i>
+            <span>Recent</span>
+        </li>
+        <li> 
+            <i class="fi fi-rr-folder-open"></i>
+            <span>Library</span>
+        </li>
+        <li>
+            <i class="fi fi-sr-settings"></i> 
+            <span>Settings</span>
+        </li>
     </ul>
 </aside>
         
@@ -27,14 +41,14 @@
            
             <div class="file-picker">
                 <label for="fileInput" class="file-label">
-                    🎵 Select Music Files (MP3, FLAC, etc.)
+                    <i class="fi fi-sr-music-alt"></i> Select Music Files (MP3, FLAC, etc.)
                 </label>
                 <input type="file" id="fileInput" multiple accept="audio/*">
             </div>
             <!-- Add this after the file-picker div -->
             <div style="margin-bottom: 20px;">
              <button id="clearLibraryBtn" class="clear-btn">
-              🗑️ Clear All Music
+              <i class="fi fi-rr-trash"></i>  Clear All Music
                </button>
 </div>
 
@@ -56,6 +70,7 @@
             </section>
         </main>
     </div>
+   
 
     <footer class="player">
         <div class="song-info">
@@ -86,41 +101,65 @@
         </div>
         <!-- Fullscreen Now Playing -->
 <div id="nowPlayingScreen" class="now-playing hidden">
-
+ 
     <div class="np-background"></div>
 
     <button id="closeNowPlaying" class="close-btn">✕</button>
 
     <div class="np-content">
 
-        <!-- LEFT -->
-        <div class="np-left">
+        
+   <div class="np-left">
 
-            <div class="vinyl-wrapper">
-                <div class="vinyl"></div>
+    <div class="vinyl-wrapper">
 
-                <img id="npArt" src="" class="np-art">
-            </div>
+        <div class="record-player rotating" id="recordPlayer">
 
-            <h1 id="npTitle">Song Name</h1>
-            <h3 id="npArtist">Artist</h3>
+            <div class="vinyl-disc"></div>
 
-            <div class="np-controls">
-                <button>⏮</button>
-                <button id="npPlayBtn">⏸</button>
-                <button>⏭</button>
-            </div>
+            <img id="npArt" src="" class="np-art">
 
-            <input type="range" id="npProgress">
+            <div class="vinyl-center"></div>
 
         </div>
 
-        <!-- RIGHT -->
+    </div>
+
+    <h1 id="npTitle">Song Name</h1>
+    <h3 id="npArtist">Artist</h3>
+
+    <div class="np-controls">
+
+        <button id="npPrevBtn" class="glass-btn">
+            ⏮
+        </button>
+
+        <button id="npPlayBtn" class="play-main-btn">
+            ▶
+        </button>
+
+        <button id="npNextBtn" class="glass-btn">
+            ⏭
+        </button>
+
+    </div>
+
+    <div class="np-progress-wrap">
+        <span id="npCurrent">0:00</span>
+
+        <input type="range" id="npProgress" value="0" min="0" max="100">
+
+        <span id="npDuration">0:00</span>
+    </div>
+
+</div>
+
+        
         <div class="lyrics-panel">
             <div class="lyrics">
-                <p>eyes and their words are really clear</p>
-                <p class="active">So beat it, just beat it</p>
-                <p>You better run, you better do what you can</p>
+                    <div class="lyrics-container">
+    <div id="lyricsText">Loading lyrics...</pre>
+</div>
             </div>
         </div>
 
