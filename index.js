@@ -1,3 +1,4 @@
+
 const fileInput = document.getElementById("fileInput");
 const albumRow = document.getElementById("albumRow");
 const songRow = document.getElementById("songRow");
@@ -16,12 +17,83 @@ const currentTimeEl = document.getElementById("currentTime");
 const durationText = document.getElementById("duration");
 const volumeSlider = document.getElementById("volumeSlider");
 
+
+let db;
+const DB_NAME = "HalcyonMusic";
+const DB_VERSION = 1;
+
+function initDB() {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains("songs")) {
+            db.createObjectStore("songs", { keyPath: "id", autoIncrement: true });
+        }
+    };
+
+    request.onsuccess = (event) => {
+        db = event.target.result;
+        loadSavedSongs();
+    };
+
+    request.onerror = () => console.error("IndexedDB Error");
+}
+
+
+function loadSavedSongs() {
+    const transaction = db.transaction("songs", "readonly");
+    const store = transaction.objectStore("songs");
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+        allSongs = request.result || [];
+
+        
+        for (let key in albums) {
+            delete albums[key];
+        }
+
+        
+        allSongs.forEach(song => {
+
+            
+            if (song.imageBlob) {
+                song.imageUrl = URL.createObjectURL(song.imageBlob);
+            } else {
+                song.imageUrl =
+                    "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+            }
+
+            // Rebuild album groups
+            if (!albums[song.album]) {
+                albums[song.album] = [];
+            }
+
+            albums[song.album].push(song);
+        });
+
+        currentSongs = allSongs;
+
+        renderAlbums();
+        renderAllSongs();
+    };
+}
+
+
+function saveSong(song) {
+    const transaction = db.transaction("songs", "readwrite");
+    const store = transaction.objectStore("songs");
+    store.add(song);
+}
+
+
 const albums = {};
 let allSongs = [];
 let currentSongs = [];
 let currentIndex = 0;
 
-// Format time
+
 function formatTime(seconds) {
     if (isNaN(seconds) || seconds === Infinity) return "0:00";
     const mins = Math.floor(seconds / 60);
@@ -32,10 +104,7 @@ function formatTime(seconds) {
 
 fileInput.addEventListener("change", (event) => {
     const files = event.target.files;
-    let processed = 0;
     const audioFiles = Array.from(files).filter(f => f.type.startsWith("audio/"));
-
-    if (audioFiles.length === 0) return;
 
     audioFiles.forEach(file => {
         jsmediatags.read(file, {
@@ -46,32 +115,37 @@ fileInput.addEventListener("change", (event) => {
                 const picture = tag.tags.picture;
 
                 let imageUrl = "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+                let imageBlob = null;
+
                 if (picture) {
-                    const blob = new Blob([new Uint8Array(picture.data)], { type: picture.format });
-                    imageUrl = URL.createObjectURL(blob);
+                    imageBlob = new Blob([new Uint8Array(picture.data)], { type: picture.format });
+                    imageUrl = URL.createObjectURL(imageBlob);
                 }
 
-                const song = { title, artist, album: albumName, file, imageUrl };
+                const song = {
+                    title,
+                    artist,
+                    album: albumName,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileData: file,
+                    imageBlob: imageBlob,
+                    imageUrl: imageUrl
+                };
 
-                // Add to library without clearing old songs
-                if (!albums[albumName]) albums[albumName] = [];
-                albums[albumName].push(song);
+                saveSong(song);
                 allSongs.push(song);
 
-                processed++;
-                if (processed === audioFiles.length) {
-                    renderAlbums();
-                    renderAllSongs();
-                }
+                if (!albums[albumName]) albums[albumName] = [];
+                albums[albumName].push(song);
+
+                renderAlbums();
+                renderAllSongs();
             },
-            onError: (err) => {
-                console.error("Error reading tags for:", file.name, err);
-                processed++;
-            }
+            onError: (err) => console.error("Error reading file:", file.name, err)
         });
     });
 });
-
 
 function renderAlbums() {
     albumRow.innerHTML = "";
@@ -114,32 +188,19 @@ function renderAllSongs(filteredSongs = allSongs) {
 
 function playSong(index) {
     if (index < 0 || index >= currentSongs.length) return;
-
+    
     currentIndex = index;
     const song = currentSongs[index];
 
-    const url = URL.createObjectURL(song.file);
+    const url = URL.createObjectURL(song.fileData);
     audioPlayer.src = url;
 
     currentTitle.textContent = song.title;
     currentArtist.textContent = song.artist;
     playerArt.src = song.imageUrl;
 
-    audioPlayer.play().catch(err => {
-        console.error(err);
-        if (song.file.name.toLowerCase().endsWith('.flac')) {
-            alert("FLAC playback failed.\nTry Chrome or convert to MP3.");
-        }
-    });
-
+    audioPlayer.play().catch(err => console.error(err));
     playBtn.textContent = "⏸";
-    highlightCurrentSong();
-}
-
-function highlightCurrentSong() {
-    document.querySelectorAll(".song-card").forEach((card, i) => {
-        card.classList.toggle("playing", i === currentIndex);
-    });
 }
 
 
@@ -176,20 +237,82 @@ audioPlayer.addEventListener("ended", () => {
     playSong(currentIndex + 1);
 });
 
-
 searchInput.addEventListener("input", () => {
     const term = searchInput.value.toLowerCase().trim();
-    
     if (term === "") {
         renderAllSongs(allSongs);
         return;
     }
-
-    const filtered = allSongs.filter(song => 
-        song.title.toLowerCase().includes(term) || 
+    const filtered = allSongs.filter(song =>
+        song.title.toLowerCase().includes(term) ||
         song.artist.toLowerCase().includes(term) ||
         song.album.toLowerCase().includes(term)
     );
-
     renderAllSongs(filtered);
 });
+
+const sidebar = document.getElementById("sidebar");
+const toggleSidebar = document.getElementById("toggleSidebar");
+
+toggleSidebar.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+});
+
+
+const clearLibraryBtn = document.getElementById("clearLibraryBtn");
+
+clearLibraryBtn.addEventListener("click", () => {
+    const transaction = db.transaction("songs", "readwrite");
+    const store = transaction.objectStore("songs");
+
+    const request = store.clear();
+
+    request.onsuccess = () => {
+        
+        allSongs = [];
+        currentSongs = [];
+        
+    
+        for (let key in albums) {
+            delete albums[key];
+        }
+
+    
+        albumRow.innerHTML = "";
+        songRow.innerHTML = "";
+
+        currentTitle.textContent = "No song playing";
+        currentArtist.textContent = "Select music files to begin";
+        playerArt.src = "https://via.placeholder.com/80";
+
+        audioPlayer.pause();
+        audioPlayer.src = "";
+
+        alert("Music library cleared!");
+    };
+
+});
+const nowPlayingScreen = document.getElementById("nowPlayingScreen");
+const closeNowPlaying = document.getElementById("closeNowPlaying");
+
+const npArt = document.getElementById("npArt");
+const npTitle = document.getElementById("npTitle");
+const npArtist = document.getElementById("npArtist");
+
+playerArt.addEventListener("click", () => {
+
+    nowPlayingScreen.classList.remove("hidden");
+
+    npArt.src = playerArt.src;
+    npTitle.textContent = currentTitle.textContent;
+    npArtist.textContent = currentArtist.textContent;
+
+    document.querySelector(".np-background")
+        .style.backgroundImage = `url(${playerArt.src})`;
+});
+
+closeNowPlaying.addEventListener("click", () => {
+    nowPlayingScreen.classList.add("hidden");
+});
+
+initDB();
