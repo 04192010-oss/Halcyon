@@ -1,3 +1,4 @@
+let currentLyrics = [];
 
 const fileInput = document.getElementById("fileInput");
 const albumRow = document.getElementById("albumRow");
@@ -49,23 +50,17 @@ function loadSavedSongs() {
     request.onsuccess = () => {
         allSongs = request.result || [];
 
-        
         for (let key in albums) {
             delete albums[key];
         }
 
-        
         allSongs.forEach(song => {
-
-            
             if (song.imageBlob) {
                 song.imageUrl = URL.createObjectURL(song.imageBlob);
             } else {
-                song.imageUrl =
-                    "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+                song.imageUrl = "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
             }
 
-            // Rebuild album groups
             if (!albums[song.album]) {
                 albums[song.album] = [];
             }
@@ -147,6 +142,7 @@ fileInput.addEventListener("change", (event) => {
     });
 });
 
+
 function renderAlbums() {
     albumRow.innerHTML = "";
     Object.keys(albums).forEach(albumName => {
@@ -186,21 +182,42 @@ function renderAllSongs(filteredSongs = allSongs) {
     });
 }
 
+function updateNowPlayingUI(song) {
+    npArt.src = song.imageUrl;
+    npTitle.textContent = song.title;
+    npArtist.textContent = song.artist;
+    document.querySelector(".np-background").style.backgroundImage = `url(${song.imageUrl})`;
+}
+
 function playSong(index) {
     if (index < 0 || index >= currentSongs.length) return;
-    
+
     currentIndex = index;
     const song = currentSongs[index];
-
     const url = URL.createObjectURL(song.fileData);
     audioPlayer.src = url;
 
+    // Bottom player
     currentTitle.textContent = song.title;
     currentArtist.textContent = song.artist;
     playerArt.src = song.imageUrl;
 
+    // Fullscreen player
+    npTitle.textContent = song.title;
+    npArtist.textContent = song.artist;
+    npArt.src = song.imageUrl;
+
+    // Background blur image
+    document.querySelector(".np-background").style.backgroundImage = `url(${song.imageUrl})`;
+
+    fetchLyrics(song);
+
     audioPlayer.play().catch(err => console.error(err));
+
     playBtn.textContent = "⏸";
+    npPlayBtn.textContent = "⏸";
+
+    recordPlayer.classList.remove("paused-spin");
 }
 
 
@@ -222,7 +239,12 @@ audioPlayer.addEventListener("timeupdate", () => {
         progressBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
         currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
         durationText.textContent = formatTime(audioPlayer.duration);
+
+        npProgress.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        npCurrent.textContent = formatTime(audioPlayer.currentTime);
+        npDuration.textContent = formatTime(audioPlayer.duration);
     }
+    updateLyrics();
 });
 
 progressBar.addEventListener("input", () => {
@@ -251,6 +273,7 @@ searchInput.addEventListener("input", () => {
     renderAllSongs(filtered);
 });
 
+
 const sidebar = document.getElementById("sidebar");
 const toggleSidebar = document.getElementById("toggleSidebar");
 
@@ -264,20 +287,16 @@ const clearLibraryBtn = document.getElementById("clearLibraryBtn");
 clearLibraryBtn.addEventListener("click", () => {
     const transaction = db.transaction("songs", "readwrite");
     const store = transaction.objectStore("songs");
-
     const request = store.clear();
 
     request.onsuccess = () => {
-        
         allSongs = [];
         currentSongs = [];
-        
-    
+
         for (let key in albums) {
             delete albums[key];
         }
 
-    
         albumRow.innerHTML = "";
         songRow.innerHTML = "";
 
@@ -290,8 +309,9 @@ clearLibraryBtn.addEventListener("click", () => {
 
         alert("Music library cleared!");
     };
-
 });
+
+
 const nowPlayingScreen = document.getElementById("nowPlayingScreen");
 const closeNowPlaying = document.getElementById("closeNowPlaying");
 
@@ -300,19 +320,93 @@ const npTitle = document.getElementById("npTitle");
 const npArtist = document.getElementById("npArtist");
 
 playerArt.addEventListener("click", () => {
-
     nowPlayingScreen.classList.remove("hidden");
-
     npArt.src = playerArt.src;
     npTitle.textContent = currentTitle.textContent;
     npArtist.textContent = currentArtist.textContent;
-
-    document.querySelector(".np-background")
-        .style.backgroundImage = `url(${playerArt.src})`;
+    document.querySelector(".np-background").style.backgroundImage = `url(${playerArt.src})`;
 });
 
 closeNowPlaying.addEventListener("click", () => {
     nowPlayingScreen.classList.add("hidden");
 });
 
+
+const npPlayBtn = document.getElementById("npPlayBtn");
+const npPrevBtn = document.getElementById("npPrevBtn");
+const npNextBtn = document.getElementById("npNextBtn");
+const npProgress = document.getElementById("npProgress");
+const npCurrent = document.getElementById("npCurrent");
+const npDuration = document.getElementById("npDuration");
+const recordPlayer = document.getElementById("recordPlayer");
+
+npPlayBtn.addEventListener("click", () => {
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+        npPlayBtn.textContent = "⏸";
+        recordPlayer.classList.remove("paused-spin");
+    } else {
+        audioPlayer.pause();
+        npPlayBtn.textContent = "▶";
+        recordPlayer.classList.add("paused-spin");
+    }
+});
+
+npPrevBtn.addEventListener("click", () => playSong(currentIndex - 1));
+npNextBtn.addEventListener("click", () => playSong(currentIndex + 1));
+
+npProgress.addEventListener("input", () => {
+    audioPlayer.currentTime = (npProgress.value / 100) * audioPlayer.duration;
+});
+
+audioPlayer.addEventListener("play", () => {
+    npPlayBtn.textContent = "⏸";
+    recordPlayer.classList.remove("paused-spin");
+});
+
+audioPlayer.addEventListener("pause", () => {
+    npPlayBtn.textContent = "▶";
+    recordPlayer.classList.add("paused-spin");
+});
+
+
+
+async function fetchLyrics(song) {
+    const lyricsText = document.getElementById("lyricsText");
+    if (!lyricsText) return;
+    lyricsText.textContent = "Loading lyrics...";
+
+    const track = encodeURIComponent(song.title);
+    const artist = encodeURIComponent(song.artist);
+    const lrclibUrl = `https://lrclib.net/api/search?track_name=${track}&artist_name=${artist}`;
+
+    const attempts = [
+        { url: lrclibUrl, wrapped: false },
+        { url: `https://corsproxy.io/?url=${encodeURIComponent(lrclibUrl)}`, wrapped: false },
+        { url: `https://api.allorigins.win/get?url=${encodeURIComponent(lrclibUrl)}`, wrapped: true }
+    ];
+
+    for (let i = 0; i < attempts.length; i++) {
+        try {
+            const response = await fetch(attempts[i].url);
+            if (!response.ok) continue;
+
+            let data = await response.json();
+            if (attempts[i].wrapped) data = JSON.parse(data.contents);
+
+            if (data.length > 0) {
+                const lyrics = data[0].plainLyrics || data[0].syncedLyrics?.replace(/\[\d+:\d+\.\d+\]/g, "").trim();
+                lyricsText.textContent = lyrics || "No lyrics available.";
+            } else {
+                lyricsText.textContent = "Lyrics not found.";
+            }
+            return;
+
+        } catch (error) {
+            console.warn(`Attempt ${i + 1} failed:`, error);
+        }
+    }
+
+    lyricsText.textContent = "Failed to load lyrics.";
+}
 initDB();
