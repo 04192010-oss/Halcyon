@@ -11,33 +11,32 @@
 </head>
 <body>
     <div class="container">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-            <h2>Halcyon</h2>
-            <button id="toggleSidebar" class="toggle-btn">☰</button>
-    </div>
+    <aside class="sidebar" id="sidebar">
+       <div class="sidebar-header">
+        <h2>Halcyon</h2>
+        <button id="toggleSidebar" class="toggle-btn">☰</button>
+       </div>
     
-        <ul>
-         <li>
+     <ul>
+        <li>
             <i class="fi fi-sr-home"></i>
             <span>Home</span>
-         </li>
-         <li>
+        </li>
+        <li>
             <i class="fi fi-sr-time-forward"></i>
             <span>Recent</span>
-         </li>
-         <li>
+        </li>
+        <li>
             <i class="fi fi-sr-book"></i>
             <span>Library</span>
-         </li>
-         <li>
+        </li>
+        <li>
             <i class="fi fi-sr-settings"></i>
             <span>Settings</span>
-         </li>
-        </ul>
+        </li>
+     </ul>
 
-    
-    <div class="sidebar-actions">
+       <div class="sidebar-actions">
         <label for="fileInput" class="sidebar-add-btn">
             <i class="fi fi-sr-music-alt"></i>
             <span>Add Music</span>
@@ -47,16 +46,15 @@
             <i class="fi fi-rr-trash"></i>
             <span>Clear Library</span>
         </button>
-         </div>
-      </aside>
+       </div>
+    </aside>
         
         <main class="main-content">
             
            
-            <div class="file-picker">
-            
-                <input type="file" id="fileInput" multiple accept="audio/*">
-            </div>
+             <div class="file-picker">
+               <input type="file" id="fileInput" multiple accept="audio/*" style="display:none;">
+             </div>
             
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Search songs...">
@@ -68,13 +66,27 @@
                 <div id="albumRow" class="album-row"></div>
             </section>
 
-            <!-- Songs -->
-            <section class="recommended-songs">
-                <h2 id="songSectionTitle">All Songs</h2>
-                <div id="songRow" class="song-row"></div>
-            </section>
+        
+    <section class="recommended-songs">
+       <div class="section-header">
+        <h2 id="songSectionTitle">All Songs</h2>
+        
+        <div class="sort-container">
+            <button id="infiniteRadioBtn" class="infinite-radio-btn">
+                ♾️ Infinite Radio
+            </button>
+            
+            <select id="sortSelect" class="sort-select">
+                <option value="title">Sort by Title</option>
+                <option value="artist">Sort by Artist</option>
+                <option value="album">Sort by Album</option>
+            </select>
+           </div>
+         </div>
+        <div id="songRow" class="song-row"></div>
+    </section>
         </main>
-    </div>
+      </div>
    
 
     <footer class="player">
@@ -104,7 +116,7 @@
             <span>🔊</span>
             <input type="range" id="volumeSlider" value="1" min="0" max="1" step="0.01">
         </div>
-        <!-- Fullscreen Now Playing -->
+       
 <div id="nowPlayingScreen" class="now-playing hidden">
  
     <div class="np-background"></div>
