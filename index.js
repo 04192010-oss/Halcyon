@@ -164,7 +164,13 @@ function renderAlbums() {
 
 function renderAllSongs(filteredSongs = allSongs) {
     songRow.innerHTML = "";
-    filteredSongs.forEach((song, index) => {
+
+    // Sort songs alphabetically by title
+    const sortedSongs = [...filteredSongs].sort((a, b) => 
+        a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+    );
+
+    sortedSongs.forEach((song, index) => {
         const card = document.createElement("div");
         card.className = "song-card";
         card.innerHTML = `
@@ -174,14 +180,16 @@ function renderAllSongs(filteredSongs = allSongs) {
                 <p>${song.artist} • ${song.album}</p>
             </div>
         `;
+        
+        // Find original index for playback
         card.onclick = () => {
-            currentSongs = filteredSongs;
-            playSong(index);
+            currentSongs = sortedSongs;           // Use sorted list
+            playSong(index);                      // index in sorted array
         };
+        
         songRow.appendChild(card);
     });
 }
-
 function updateNowPlayingUI(song) {
     npArt.src = song.imageUrl;
     npTitle.textContent = song.title;
@@ -255,21 +263,35 @@ volumeSlider.addEventListener("input", () => {
     audioPlayer.volume = parseFloat(volumeSlider.value);
 });
 
+
 audioPlayer.addEventListener("ended", () => {
-    playSong(currentIndex + 1);
+    if (isInfiniteRadio && currentSongs.length > 1) {
+        // Continue shuffling in Infinite Radio mode
+        let nextIndex = Math.floor(Math.random() * currentSongs.length);
+        while (nextIndex === currentIndex && currentSongs.length > 1) {
+            nextIndex = Math.floor(Math.random() * currentSongs.length);
+        }
+        playSong(nextIndex);
+    } else {
+        // Normal behavior
+        playSong(currentIndex + 1);
+    }
 });
 
 searchInput.addEventListener("input", () => {
     const term = searchInput.value.toLowerCase().trim();
+    
     if (term === "") {
         renderAllSongs(allSongs);
         return;
     }
+    
     const filtered = allSongs.filter(song =>
         song.title.toLowerCase().includes(term) ||
         song.artist.toLowerCase().includes(term) ||
         song.album.toLowerCase().includes(term)
     );
+    
     renderAllSongs(filtered);
 });
 
@@ -409,4 +431,86 @@ async function fetchLyrics(song) {
 
     lyricsText.textContent = "Failed to load lyrics.";
 }
+let isInfiniteRadio = false;
+
+
+const infiniteRadioBtn = document.getElementById("infiniteRadioBtn");
+
+infiniteRadioBtn.addEventListener("click", () => {
+    if (allSongs.length === 0) {
+        alert("Add some songs first!");
+        return;
+    }
+
+    isInfiniteRadio = true;
+    infiniteRadioBtn.classList.add("active");
+
+    // Shuffle all songs
+    currentSongs = [...allSongs].sort(() => Math.random() - 0.5);
+    
+    // Start playing from a random song
+    const randomIndex = Math.floor(Math.random() * currentSongs.length);
+    playSong(randomIndex);
+
+    document.getElementById("songSectionTitle").textContent = "Infinite Radio";
+    
+    console.log("♾️ Infinite Radio Started - Shuffling all songs");
+});
+let currentSort = "title";
+
+// Sorting function
+function sortSongs(songs, criteria) {
+    return [...songs].sort((a, b) => {
+        let valA, valB;
+        
+        switch(criteria) {
+            case "artist":
+                valA = a.artist.toLowerCase();
+                valB = b.artist.toLowerCase();
+                break;
+            case "album":
+                valA = a.album.toLowerCase();
+                valB = b.album.toLowerCase();
+                break;
+            case "title":
+            default:
+                valA = a.title.toLowerCase();
+                valB = b.title.toLowerCase();
+        }
+        
+        return valA.localeCompare(valB);
+    });
+}
+
+// Update renderAllSongs
+function renderAllSongs(filteredSongs = allSongs) {
+    songRow.innerHTML = "";
+
+    const sortedSongs = sortSongs(filteredSongs, currentSort);
+
+    sortedSongs.forEach((song, index) => {
+        const card = document.createElement("div");
+        card.className = "song-card";
+        card.innerHTML = `
+            <img src="${song.imageUrl}" alt="">
+            <div class="song-info-text">
+                <h4>${song.title}</h4>
+                <p>${song.artist} • ${song.album}</p>
+            </div>
+        `;
+        
+        card.onclick = () => {
+            currentSongs = sortedSongs;
+            playSong(index);
+        };
+        
+        songRow.appendChild(card);
+    });
+}
+
+// Add event listener for sort select
+document.getElementById("sortSelect").addEventListener("change", (e) => {
+    currentSort = e.target.value;
+    renderAllSongs(allSongs);   // Re-render with new sort
+});
 initDB();
