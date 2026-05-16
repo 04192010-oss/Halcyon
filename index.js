@@ -1,4 +1,5 @@
-let currentLyrics = [];
+const sidebar = document.getElementById("sidebar");
+const toggleSidebar = document.getElementById("toggleSidebar");
 
 const fileInput = document.getElementById("fileInput");
 const albumRow = document.getElementById("albumRow");
@@ -6,9 +7,11 @@ const songRow = document.getElementById("songRow");
 const searchInput = document.getElementById("searchInput");
 
 const audioPlayer = document.getElementById("audioPlayer");
+
 const playBtn = document.getElementById("PlayBtn");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
+
 const currentTitle = document.getElementById("currentTitle");
 const currentArtist = document.getElementById("currentArtist");
 const playerArt = document.getElementById("playerArt");
@@ -16,38 +19,109 @@ const playerArt = document.getElementById("playerArt");
 const progressBar = document.getElementById("progressBar");
 const currentTimeEl = document.getElementById("currentTime");
 const durationText = document.getElementById("duration");
+
 const volumeSlider = document.getElementById("volumeSlider");
 
+const nowPlayingScreen = document.getElementById("nowPlayingScreen");
+const closeNowPlaying = document.getElementById("closeNowPlaying");
+
+const npArt = document.getElementById("npArt");
+const npTitle = document.getElementById("npTitle");
+const npArtist = document.getElementById("npArtist");
+
+const npPlayBtn = document.getElementById("npPlayBtn");
+const npPrevBtn = document.getElementById("npPrevBtn");
+const npNextBtn = document.getElementById("npNextBtn");
+
+const npProgress = document.getElementById("npProgress");
+const npCurrent = document.getElementById("npCurrent");
+const npDuration = document.getElementById("npDuration");
+
+const recordPlayer = document.getElementById("recordPlayer");
+
+const clearLibraryBtn = document.getElementById("clearLibraryBtn");
+const infiniteRadioBtn = document.getElementById("infiniteRadioBtn");
+const sortSelect = document.getElementById("sortSelect");
 
 let db;
+
 const DB_NAME = "HalcyonMusic";
 const DB_VERSION = 1;
 
+const albums = {};
+
+let allSongs = [];
+let currentSongs = [];
+
+let currentIndex = 0;
+let currentSort = "title";
+let isInfiniteRadio = false;
+
+/* =========================
+   SIDEBAR
+========================= */
+
+toggleSidebar.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+});
+
+/* =========================
+   DATABASE
+========================= */
+
 function initDB() {
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
+
         db = event.target.result;
+
         if (!db.objectStoreNames.contains("songs")) {
-            db.createObjectStore("songs", { keyPath: "id", autoIncrement: true });
+
+            db.createObjectStore("songs", {
+                keyPath: "id",
+                autoIncrement: true
+            });
+
         }
+
     };
 
     request.onsuccess = (event) => {
+
         db = event.target.result;
+
         loadSavedSongs();
+
     };
 
-    request.onerror = () => console.error("IndexedDB Error");
+    request.onerror = () => {
+        console.error("IndexedDB Error");
+    };
+
 }
 
+function saveSong(song) {
+
+    const transaction = db.transaction("songs", "readwrite");
+
+    const store = transaction.objectStore("songs");
+
+    store.add(song);
+
+}
 
 function loadSavedSongs() {
+
     const transaction = db.transaction("songs", "readonly");
+
     const store = transaction.objectStore("songs");
+
     const request = store.getAll();
 
     request.onsuccess = () => {
+
         allSongs = request.result || [];
 
         for (let key in albums) {
@@ -55,10 +129,16 @@ function loadSavedSongs() {
         }
 
         allSongs.forEach(song => {
+
             if (song.imageBlob) {
+
                 song.imageUrl = URL.createObjectURL(song.imageBlob);
+
             } else {
-                song.imageUrl = "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+
+                song.imageUrl =
+                    "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+
             }
 
             if (!albums[song.album]) {
@@ -66,113 +146,220 @@ function loadSavedSongs() {
             }
 
             albums[song.album].push(song);
+
         });
 
         currentSongs = allSongs;
 
         renderAlbums();
         renderAllSongs();
+
     };
+
 }
 
-
-function saveSong(song) {
-    const transaction = db.transaction("songs", "readwrite");
-    const store = transaction.objectStore("songs");
-    store.add(song);
-}
-
-
-const albums = {};
-let allSongs = [];
-let currentSongs = [];
-let currentIndex = 0;
-
+/* =========================
+   HELPERS
+========================= */
 
 function formatTime(seconds) {
-    if (isNaN(seconds) || seconds === Infinity) return "0:00";
+
+    if (isNaN(seconds) || seconds === Infinity) {
+        return "0:00";
+    }
+
     const mins = Math.floor(seconds / 60);
+
     const secs = Math.floor(seconds % 60);
+
     return `${mins}:${secs.toString().padStart(2, "0")}`;
+
 }
 
+function sortSongs(songs, criteria) {
+
+    return [...songs].sort((a, b) => {
+
+        let valA;
+        let valB;
+
+        switch (criteria) {
+
+            case "artist":
+                valA = a.artist.toLowerCase();
+                valB = b.artist.toLowerCase();
+                break;
+
+            case "album":
+                valA = a.album.toLowerCase();
+                valB = b.album.toLowerCase();
+                break;
+
+            case "title":
+            default:
+                valA = a.title.toLowerCase();
+                valB = b.title.toLowerCase();
+
+        }
+
+        return valA.localeCompare(valB);
+
+    });
+
+}
+
+/* =========================
+   FILE INPUT
+========================= */
 
 fileInput.addEventListener("change", (event) => {
+
     const files = event.target.files;
-    const audioFiles = Array.from(files).filter(f => f.type.startsWith("audio/"));
+
+    const audioFiles = Array.from(files).filter(file =>
+        file.type.startsWith("audio/")
+    );
 
     audioFiles.forEach(file => {
+
         jsmediatags.read(file, {
+
             onSuccess: (tag) => {
-                const title = tag.tags.title || file.name.replace(/\.[^/.]+$/, "");
-                const artist = tag.tags.artist || "Unknown Artist";
-                const albumName = tag.tags.album || "Unknown Album";
+
+                const title =
+                    tag.tags.title ||
+                    file.name.replace(/\.[^/.]+$/, "");
+
+                const artist =
+                    tag.tags.artist || "Unknown Artist";
+
+                const albumName =
+                    tag.tags.album || "Unknown Album";
+
                 const picture = tag.tags.picture;
 
-                let imageUrl = "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
                 let imageBlob = null;
 
+                let imageUrl =
+                    "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+
                 if (picture) {
-                    imageBlob = new Blob([new Uint8Array(picture.data)], { type: picture.format });
+
+                    imageBlob = new Blob(
+                        [new Uint8Array(picture.data)],
+                        { type: picture.format }
+                    );
+
                     imageUrl = URL.createObjectURL(imageBlob);
+
                 }
 
                 const song = {
+
                     title,
                     artist,
+
                     album: albumName,
+
                     fileName: file.name,
                     fileType: file.type,
+
                     fileData: file,
-                    imageBlob: imageBlob,
-                    imageUrl: imageUrl
+
+                    imageBlob,
+                    imageUrl
+
                 };
 
                 saveSong(song);
+
                 allSongs.push(song);
 
-                if (!albums[albumName]) albums[albumName] = [];
+                if (!albums[albumName]) {
+                    albums[albumName] = [];
+                }
+
                 albums[albumName].push(song);
 
                 renderAlbums();
                 renderAllSongs();
+
             },
-            onError: (err) => console.error("Error reading file:", file.name, err)
+
+            onError: (err) => {
+
+                console.error(
+                    "Error reading file:",
+                    file.name,
+                    err
+                );
+
+            }
+
         });
+
     });
+
 });
 
+/* =========================
+   RENDER ALBUMS
+========================= */
 
 function renderAlbums() {
+
     albumRow.innerHTML = "";
+
     Object.keys(albums).forEach(albumName => {
+
         const songs = albums[albumName];
+
         const card = document.createElement("div");
+
         card.className = "album-card";
+
         card.innerHTML = `
             <img src="${songs[0].imageUrl}" alt="${albumName}">
             <p>${albumName}</p>
         `;
+
         card.onclick = () => {
+
             currentSongs = songs;
+
             playSong(0);
-            document.getElementById("songSectionTitle").textContent = albumName;
+
+            document.getElementById(
+                "songSectionTitle"
+            ).textContent = albumName;
+
         };
+
         albumRow.appendChild(card);
+
     });
+
 }
 
+/* =========================
+   RENDER SONGS
+========================= */
+
 function renderAllSongs(filteredSongs = allSongs) {
+
     songRow.innerHTML = "";
 
-    // Sort songs alphabetically by title
-    const sortedSongs = [...filteredSongs].sort((a, b) => 
-        a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+    const sortedSongs = sortSongs(
+        filteredSongs,
+        currentSort
     );
 
     sortedSongs.forEach((song, index) => {
+
         const card = document.createElement("div");
+
         card.className = "song-card";
+
         card.innerHTML = `
             <img src="${song.imageUrl}" alt="">
             <div class="song-info-text">
@@ -180,43 +367,52 @@ function renderAllSongs(filteredSongs = allSongs) {
                 <p>${song.artist} • ${song.album}</p>
             </div>
         `;
-        
-        // Find original index for playback
+
         card.onclick = () => {
-            currentSongs = sortedSongs;           // Use sorted list
-            playSong(index);                      // index in sorted array
+
+            currentSongs = sortedSongs;
+
+            playSong(index);
+
         };
-        
+
         songRow.appendChild(card);
+
     });
+
 }
-function updateNowPlayingUI(song) {
-    npArt.src = song.imageUrl;
-    npTitle.textContent = song.title;
-    npArtist.textContent = song.artist;
-    document.querySelector(".np-background").style.backgroundImage = `url(${song.imageUrl})`;
-}
+
+/* =========================
+   PLAY SONG
+========================= */
 
 function playSong(index) {
-    if (index < 0 || index >= currentSongs.length) return;
+
+    if (index < 0 || index >= currentSongs.length) {
+        return;
+    }
 
     currentIndex = index;
+
     const song = currentSongs[index];
+
     const url = URL.createObjectURL(song.fileData);
+
     audioPlayer.src = url;
 
-    // Bottom player
     currentTitle.textContent = song.title;
     currentArtist.textContent = song.artist;
+
     playerArt.src = song.imageUrl;
 
-    // Fullscreen player
     npTitle.textContent = song.title;
     npArtist.textContent = song.artist;
+
     npArt.src = song.imageUrl;
 
-    // Background blur image
-    document.querySelector(".np-background").style.backgroundImage = `url(${song.imageUrl})`;
+    document.querySelector(".np-background")
+        .style.backgroundImage =
+        `url(${song.imageUrl})`;
 
     fetchLyrics(song);
 
@@ -226,92 +422,190 @@ function playSong(index) {
     npPlayBtn.textContent = "⏸";
 
     recordPlayer.classList.remove("paused-spin");
+
 }
 
+/* =========================
+   PLAYER CONTROLS
+========================= */
 
 playBtn.addEventListener("click", () => {
+
     if (audioPlayer.paused) {
+
         audioPlayer.play();
-        playBtn.textContent = "⏸";
+
     } else {
+
         audioPlayer.pause();
-        playBtn.textContent = "▶";
+
     }
+
 });
 
-prevBtn.addEventListener("click", () => playSong(currentIndex - 1));
-nextBtn.addEventListener("click", () => playSong(currentIndex + 1));
+npPlayBtn.addEventListener("click", () => {
+
+    if (audioPlayer.paused) {
+
+        audioPlayer.play();
+
+    } else {
+
+        audioPlayer.pause();
+
+    }
+
+});
+
+audioPlayer.addEventListener("play", () => {
+
+    playBtn.textContent = "⏸";
+    npPlayBtn.textContent = "⏸";
+
+    recordPlayer.classList.remove("paused-spin");
+
+});
+
+audioPlayer.addEventListener("pause", () => {
+
+    playBtn.textContent = "▶";
+    npPlayBtn.textContent = "▶";
+
+    recordPlayer.classList.add("paused-spin");
+
+});
+
+prevBtn.addEventListener("click", () => {
+    playSong(currentIndex - 1);
+});
+
+nextBtn.addEventListener("click", () => {
+    playSong(currentIndex + 1);
+});
+
+npPrevBtn.addEventListener("click", () => {
+    playSong(currentIndex - 1);
+});
+
+npNextBtn.addEventListener("click", () => {
+    playSong(currentIndex + 1);
+});
+
+/* =========================
+   PROGRESS
+========================= */
 
 audioPlayer.addEventListener("timeupdate", () => {
-    if (audioPlayer.duration) {
-        progressBar.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
-        durationText.textContent = formatTime(audioPlayer.duration);
 
-        npProgress.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        npCurrent.textContent = formatTime(audioPlayer.currentTime);
-        npDuration.textContent = formatTime(audioPlayer.duration);
+    if (audioPlayer.duration) {
+
+        const progress =
+            (audioPlayer.currentTime /
+                audioPlayer.duration) * 100;
+
+        progressBar.value = progress;
+        npProgress.value = progress;
+
+        currentTimeEl.textContent =
+            formatTime(audioPlayer.currentTime);
+
+        npCurrent.textContent =
+            formatTime(audioPlayer.currentTime);
+
+        durationText.textContent =
+            formatTime(audioPlayer.duration);
+
+        npDuration.textContent =
+            formatTime(audioPlayer.duration);
+
     }
-    updateLyrics();
+
 });
 
 progressBar.addEventListener("input", () => {
-    audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
+
+    audioPlayer.currentTime =
+        (progressBar.value / 100) *
+        audioPlayer.duration;
+
 });
+
+npProgress.addEventListener("input", () => {
+
+    audioPlayer.currentTime =
+        (npProgress.value / 100) *
+        audioPlayer.duration;
+
+});
+
+/* =========================
+   VOLUME
+========================= */
 
 volumeSlider.addEventListener("input", () => {
-    audioPlayer.volume = parseFloat(volumeSlider.value);
+
+    audioPlayer.volume =
+        parseFloat(volumeSlider.value);
+
 });
 
-
-audioPlayer.addEventListener("ended", () => {
-    if (isInfiniteRadio && currentSongs.length > 1) {
-        // Continue shuffling in Infinite Radio mode
-        let nextIndex = Math.floor(Math.random() * currentSongs.length);
-        while (nextIndex === currentIndex && currentSongs.length > 1) {
-            nextIndex = Math.floor(Math.random() * currentSongs.length);
-        }
-        playSong(nextIndex);
-    } else {
-        // Normal behavior
-        playSong(currentIndex + 1);
-    }
-});
+/* =========================
+   SEARCH
+========================= */
 
 searchInput.addEventListener("input", () => {
-    const term = searchInput.value.toLowerCase().trim();
-    
+
+    const term =
+        searchInput.value.toLowerCase().trim();
+
     if (term === "") {
+
         renderAllSongs(allSongs);
+
         return;
+
     }
-    
+
     const filtered = allSongs.filter(song =>
+
         song.title.toLowerCase().includes(term) ||
         song.artist.toLowerCase().includes(term) ||
         song.album.toLowerCase().includes(term)
+
     );
-    
+
     renderAllSongs(filtered);
+
 });
 
+/* =========================
+   SORT
+========================= */
 
-const sidebar = document.getElementById("sidebar");
-const toggleSidebar = document.getElementById("toggleSidebar");
+sortSelect.addEventListener("change", (e) => {
 
-toggleSidebar.addEventListener("click", () => {
-    sidebar.classList.toggle("collapsed");
+    currentSort = e.target.value;
+
+    renderAllSongs(allSongs);
+
 });
 
-
-const clearLibraryBtn = document.getElementById("clearLibraryBtn");
+/* =========================
+   CLEAR LIBRARY
+========================= */
 
 clearLibraryBtn.addEventListener("click", () => {
-    const transaction = db.transaction("songs", "readwrite");
-    const store = transaction.objectStore("songs");
+
+    const transaction =
+        db.transaction("songs", "readwrite");
+
+    const store =
+        transaction.objectStore("songs");
+
     const request = store.clear();
 
     request.onsuccess = () => {
+
         allSongs = [];
         currentSongs = [];
 
@@ -322,195 +616,228 @@ clearLibraryBtn.addEventListener("click", () => {
         albumRow.innerHTML = "";
         songRow.innerHTML = "";
 
-        currentTitle.textContent = "No song playing";
-        currentArtist.textContent = "Select music files to begin";
-        playerArt.src = "https://via.placeholder.com/80";
+        currentTitle.textContent =
+            "No song playing";
+
+        currentArtist.textContent =
+            "Select music files to begin";
+
+        playerArt.src =
+            "https://via.placeholder.com/80";
 
         audioPlayer.pause();
         audioPlayer.src = "";
 
         alert("Music library cleared!");
+
     };
+
 });
 
-
-const nowPlayingScreen = document.getElementById("nowPlayingScreen");
-const closeNowPlaying = document.getElementById("closeNowPlaying");
-
-const npArt = document.getElementById("npArt");
-const npTitle = document.getElementById("npTitle");
-const npArtist = document.getElementById("npArtist");
+/* =========================
+   NOW PLAYING SCREEN
+========================= */
 
 playerArt.addEventListener("click", () => {
+
     nowPlayingScreen.classList.remove("hidden");
+
     npArt.src = playerArt.src;
-    npTitle.textContent = currentTitle.textContent;
-    npArtist.textContent = currentArtist.textContent;
-    document.querySelector(".np-background").style.backgroundImage = `url(${playerArt.src})`;
+
+    npTitle.textContent =
+        currentTitle.textContent;
+
+    npArtist.textContent =
+        currentArtist.textContent;
+
+    document.querySelector(".np-background")
+        .style.backgroundImage =
+        `url(${playerArt.src})`;
+
 });
 
 closeNowPlaying.addEventListener("click", () => {
+
     nowPlayingScreen.classList.add("hidden");
+
 });
 
-
-const npPlayBtn = document.getElementById("npPlayBtn");
-const npPrevBtn = document.getElementById("npPrevBtn");
-const npNextBtn = document.getElementById("npNextBtn");
-const npProgress = document.getElementById("npProgress");
-const npCurrent = document.getElementById("npCurrent");
-const npDuration = document.getElementById("npDuration");
-const recordPlayer = document.getElementById("recordPlayer");
-
-npPlayBtn.addEventListener("click", () => {
-    if (audioPlayer.paused) {
-        audioPlayer.play();
-        npPlayBtn.textContent = "⏸";
-        recordPlayer.classList.remove("paused-spin");
-    } else {
-        audioPlayer.pause();
-        npPlayBtn.textContent = "▶";
-        recordPlayer.classList.add("paused-spin");
-    }
-});
-
-npPrevBtn.addEventListener("click", () => playSong(currentIndex - 1));
-npNextBtn.addEventListener("click", () => playSong(currentIndex + 1));
-
-npProgress.addEventListener("input", () => {
-    audioPlayer.currentTime = (npProgress.value / 100) * audioPlayer.duration;
-});
-
-audioPlayer.addEventListener("play", () => {
-    npPlayBtn.textContent = "⏸";
-    recordPlayer.classList.remove("paused-spin");
-});
-
-audioPlayer.addEventListener("pause", () => {
-    npPlayBtn.textContent = "▶";
-    recordPlayer.classList.add("paused-spin");
-});
-
-
-
-async function fetchLyrics(song) {
-    const lyricsText = document.getElementById("lyricsText");
-    if (!lyricsText) return;
-    lyricsText.textContent = "Loading lyrics...";
-
-    const track = encodeURIComponent(song.title);
-    const artist = encodeURIComponent(song.artist);
-    const lrclibUrl = `https://lrclib.net/api/search?track_name=${track}&artist_name=${artist}`;
-
-    const attempts = [
-        { url: lrclibUrl, wrapped: false },
-        { url: `https://corsproxy.io/?url=${encodeURIComponent(lrclibUrl)}`, wrapped: false },
-        { url: `https://api.allorigins.win/get?url=${encodeURIComponent(lrclibUrl)}`, wrapped: true }
-    ];
-
-    for (let i = 0; i < attempts.length; i++) {
-        try {
-            const response = await fetch(attempts[i].url);
-            if (!response.ok) continue;
-
-            let data = await response.json();
-            if (attempts[i].wrapped) data = JSON.parse(data.contents);
-
-            if (data.length > 0) {
-                const lyrics = data[0].plainLyrics || data[0].syncedLyrics?.replace(/\[\d+:\d+\.\d+\]/g, "").trim();
-                lyricsText.textContent = lyrics || "No lyrics available.";
-            } else {
-                lyricsText.textContent = "Lyrics not found.";
-            }
-            return;
-
-        } catch (error) {
-            console.warn(`Attempt ${i + 1} failed:`, error);
-        }
-    }
-
-    lyricsText.textContent = "Failed to load lyrics.";
-}
-let isInfiniteRadio = false;
-
-
-const infiniteRadioBtn = document.getElementById("infiniteRadioBtn");
+/* =========================
+   INFINITE RADIO
+========================= */
 
 infiniteRadioBtn.addEventListener("click", () => {
+
     if (allSongs.length === 0) {
+
         alert("Add some songs first!");
+
         return;
+
     }
 
     isInfiniteRadio = true;
+
     infiniteRadioBtn.classList.add("active");
 
-    // Shuffle all songs
-    currentSongs = [...allSongs].sort(() => Math.random() - 0.5);
-    
-    // Start playing from a random song
-    const randomIndex = Math.floor(Math.random() * currentSongs.length);
+    currentSongs = [...allSongs].sort(
+        () => Math.random() - 0.5
+    );
+
+    const randomIndex =
+        Math.floor(Math.random() *
+            currentSongs.length);
+
     playSong(randomIndex);
 
-    document.getElementById("songSectionTitle").textContent = "Infinite Radio";
-    
-    console.log("♾️ Infinite Radio Started - Shuffling all songs");
-});
-let currentSort = "title";
+    document.getElementById(
+        "songSectionTitle"
+    ).textContent = "Infinite Radio";
 
-// Sorting function
-function sortSongs(songs, criteria) {
-    return [...songs].sort((a, b) => {
-        let valA, valB;
-        
-        switch(criteria) {
-            case "artist":
-                valA = a.artist.toLowerCase();
-                valB = b.artist.toLowerCase();
-                break;
-            case "album":
-                valA = a.album.toLowerCase();
-                valB = b.album.toLowerCase();
-                break;
-            case "title":
-            default:
-                valA = a.title.toLowerCase();
-                valB = b.title.toLowerCase();
+});
+
+/* =========================
+   SONG END
+========================= */
+
+audioPlayer.addEventListener("ended", () => {
+
+    if (
+        isInfiniteRadio &&
+        currentSongs.length > 1
+    ) {
+
+        let nextIndex =
+            Math.floor(
+                Math.random() *
+                currentSongs.length
+            );
+
+        while (
+            nextIndex === currentIndex &&
+            currentSongs.length > 1
+        ) {
+
+            nextIndex =
+                Math.floor(
+                    Math.random() *
+                    currentSongs.length
+                );
+
         }
-        
-        return valA.localeCompare(valB);
-    });
-}
 
-// Update renderAllSongs
-function renderAllSongs(filteredSongs = allSongs) {
-    songRow.innerHTML = "";
+        playSong(nextIndex);
 
-    const sortedSongs = sortSongs(filteredSongs, currentSort);
+    } else {
 
-    sortedSongs.forEach((song, index) => {
-        const card = document.createElement("div");
-        card.className = "song-card";
-        card.innerHTML = `
-            <img src="${song.imageUrl}" alt="">
-            <div class="song-info-text">
-                <h4>${song.title}</h4>
-                <p>${song.artist} • ${song.album}</p>
-            </div>
-        `;
-        
-        card.onclick = () => {
-            currentSongs = sortedSongs;
-            playSong(index);
-        };
-        
-        songRow.appendChild(card);
-    });
-}
+        playSong(currentIndex + 1);
 
-// Add event listener for sort select
-document.getElementById("sortSelect").addEventListener("change", (e) => {
-    currentSort = e.target.value;
-    renderAllSongs(allSongs);   // Re-render with new sort
+    }
+
 });
+
+/* =========================
+   LYRICS
+========================= */
+
+async function fetchLyrics(song) {
+
+    const lyricsText =
+        document.getElementById("lyricsText");
+
+    if (!lyricsText) return;
+
+    lyricsText.textContent =
+        "Loading lyrics...";
+
+    const track =
+        encodeURIComponent(song.title);
+
+    const artist =
+        encodeURIComponent(song.artist);
+
+    const lrclibUrl =
+        `https://lrclib.net/api/search?track_name=${track}&artist_name=${artist}`;
+
+    const attempts = [
+
+        {
+            url: lrclibUrl,
+            wrapped: false
+        },
+
+        {
+            url:
+            `https://corsproxy.io/?url=${encodeURIComponent(lrclibUrl)}`,
+            wrapped: false
+        },
+
+        {
+            url:
+            `https://api.allorigins.win/get?url=${encodeURIComponent(lrclibUrl)}`,
+            wrapped: true
+        }
+
+    ];
+
+    for (let i = 0; i < attempts.length; i++) {
+
+        try {
+
+            const response =
+                await fetch(attempts[i].url);
+
+            if (!response.ok) continue;
+
+            let data =
+                await response.json();
+
+            if (attempts[i].wrapped) {
+                data = JSON.parse(data.contents);
+            }
+
+            if (data.length > 0) {
+
+                const lyrics =
+                    data[0].plainLyrics ||
+                    data[0].syncedLyrics
+                    ?.replace(
+                        /\[\d+:\d+\.\d+\]/g,
+                        ""
+                    )
+                    .trim();
+
+                lyricsText.textContent =
+                    lyrics ||
+                    "No lyrics available.";
+
+            } else {
+
+                lyricsText.textContent =
+                    "Lyrics not found.";
+
+            }
+
+            return;
+
+        } catch (error) {
+
+            console.warn(
+                `Attempt ${i + 1} failed:`,
+                error
+            );
+
+        }
+
+    }
+
+    lyricsText.textContent =
+        "Failed to load lyrics.";
+
+}
+
+/* =========================
+   START
+========================= */
+
 initDB();
