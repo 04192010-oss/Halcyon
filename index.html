@@ -4,189 +4,293 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Halcyon</title>
+
     <link rel="icon" type="image/png" href="images/halcyon.webp">
     <link rel="stylesheet" href="styles.css">
+
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
 </head>
+
 <body>
-    <div class="container">
+
+<div class="container">
+
+    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
-       <div class="sidebar-header">
-        <h2>Halcyon</h2>
-        <button id="toggleSidebar" class="toggle-btn">☰</button>
-       </div>
-    
-     <ul>
-        <li>
-            <i class="fi fi-sr-home"></i>
-            <span>Home</span>
-        </li>
-        <li>
-            <i class="fi fi-sr-time-forward"></i>
-            <span>Recent</span>
-        </li>
-        <li>
-            <i class="fi fi-sr-book"></i>
-            <span>Library</span>
-        </li>
-        <li>
-            <i class="fi fi-sr-settings"></i>
-            <span>Settings</span>
-        </li>
-     </ul>
 
-       <div class="sidebar-actions">
-        <label for="fileInput" class="sidebar-add-btn">
-            <i class="fi fi-sr-music-alt"></i>
-            <span>Add Music</span>
-        </label>
-        
-        <button id="clearLibraryBtn" class="sidebar-clear-btn">
-            <i class="fi fi-rr-trash"></i>
-            <span>Clear Library</span>
-        </button>
-       </div>
-    </aside>
-        
-        <main class="main-content">
-            
-           
-             <div class="file-picker">
-               <input type="file" id="fileInput" multiple accept="audio/*" style="display:none;">
-             </div>
-            
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Search songs...">
-            </div>
-
-        
-            <section class="albums">
-                <h2>Your Albums</h2>
-                <div id="albumRow" class="album-row"></div>
-            </section>
-
-        
-    <section class="recommended-songs">
-       <div class="section-header">
-        <h2 id="songSectionTitle">All Songs</h2>
-        
-        <div class="sort-container">
-            <button id="infiniteRadioBtn" class="infinite-radio-btn">
-                <i class="fi fi-sr-radio-tower"></i> Infinite Radio
-            </button>
-            
-            <select id="sortSelect" class="sort-select">
-                <option value="title">Sort by Title</option>
-                <option value="artist">Sort by Artist</option>
-                <option value="album">Sort by Album</option>
-            </select>
-           </div>
-         </div>
-        <div id="songRow" class="song-row"></div>
-    </section>
-        </main>
-      </div>
-   
-
-    <footer class="player">
-        <div class="song-info">
-            <img id="playerArt" src="https://via.placeholder.com/80" alt="Album Art">
-            <div>
-                <div id="currentTitle" class="title">No song playing</div>
-                <div id="currentArtist" class="artist">Select music files to begin</div>
-            </div>
+        <div class="sidebar-header">
+            <h2>Halcyon</h2>
+            <button id="toggleSidebar" class="toggle-btn">☰</button>
         </div>
 
-        <div class="controls-container">
+        <ul>
+            <li>
+                <i class="fi fi-sr-home"></i>
+                <span>Home</span>
+            </li>
+
+            <li>
+                <i class="fi fi-sr-time-forward"></i>
+                <span>Recent</span>
+            </li>
+
+            <li>
+                <i class="fi fi-sr-book"></i>
+                <span>Library</span>
+            </li>
+
+            <li>
+                <i class="fi fi-sr-settings"></i>
+                <span>Settings</span>
+            </li>
+        </ul>
+
+        <div class="sidebar-actions">
+
+            <label for="fileInput" class="sidebar-add-btn">
+                <i class="fi fi-sr-music-alt"></i>
+                <span>Add Music</span>
+            </label>
+
+            <button id="clearLibraryBtn" class="sidebar-clear-btn">
+                <i class="fi fi-rr-trash"></i>
+                <span>Clear Library</span>
+            </button>
+
+        </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <div class="file-picker">
+            <input type="file" id="fileInput" multiple accept="audio/*" style="display:none;">
+        </div>
+
+        <!-- SEARCH -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search songs...">
+        </div>
+
+        <!-- ALBUMS -->
+        <section class="albums">
+            <h2>Your Albums</h2>
+            <div id="albumRow" class="album-row"></div>
+        </section>
+
+        <!-- SONGS -->
+        <section class="recommended-songs">
+
+            <div class="section-header">
+
+                <h2 id="songSectionTitle">All Songs</h2>
+
+                <div class="sort-container">
+
+                    <button id="infiniteRadioBtn" class="infinite-radio-btn">
+                        <i class="fi fi-sr-radio-tower"></i>
+                        Infinite Radio
+                    </button>
+
+                    <select id="sortSelect" class="sort-select">
+                        <option value="title">Sort by Title</option>
+                        <option value="artist">Sort by Artist</option>
+                        <option value="album">Sort by Album</option>
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div id="songRow" class="song-row"></div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<!-- PLAYER -->
+<footer class="player" id="player">
+
+    <div class="player-content">
+
+        <!-- LEFT -->
+        <div class="song-info">
+
+            <img id="playerArt"
+                 src="https://via.placeholder.com/80"
+                 alt="Album Art">
+
+            <div class="song-info-text">
+                <div id="currentTitle" class="title">
+                    No song playing
+                </div>
+
+                <div id="currentArtist" class="artist">
+                    Select music files to begin
+                </div>
+            </div>
+
+            <button id="likeBtn" class="player-btn">♡</button>
+
+        </div>
+
+        <!-- CENTER -->
+        <div class="player-center">
+
             <div class="controls">
-                <button id="prevBtn">⏮</button>
-                <button id="PlayBtn">▶</button>
-                <button id="nextBtn">⏭</button>
+
+                <button id="prevBtn" class="player-btn">
+                    ⏮
+                </button>
+
+                <button id="PlayBtn" class="play-main-btn">
+                    ▶
+                </button>
+
+                <button id="nextBtn" class="player-btn">
+                    ⏭
+                </button>
+
             </div>
 
             <div class="progress-area">
+
                 <span id="currentTime">0:00</span>
-                <input type="range" id="progressBar" value="0" min="0" max="100">
+
+                <input type="range"
+                       id="progressBar"
+                       value="0"
+                       min="0"
+                       max="100">
+
                 <span id="duration">0:00</span>
+
             </div>
+
         </div>
 
-        <div class="volume-control">
-            <span>🔊</span>
-            <input type="range" id="volumeSlider" value="1" min="0" max="1" step="0.01">
-        </div>
-       
-<div id="nowPlayingScreen" class="now-playing hidden">
- 
-    <div class="np-background"></div>
+        <!-- RIGHT -->
+        <div class="player-right">
 
-    <button id="closeNowPlaying" class="close-btn">✕</button>
+            <button class="player-btn">🔀</button>
 
-    <div class="np-content">
+            <button class="player-btn">🔁</button>
 
-        
-   <div class="np-left">
+            <div class="volume-control">
 
-    <div class="vinyl-wrapper">
+                <span>🔊</span>
 
-        <div class="record-player rotating" id="recordPlayer">
+                <input type="range"
+                       id="volumeSlider"
+                       value="1"
+                       min="0"
+                       max="1"
+                       step="0.01">
 
-            <div class="vinyl-disc"></div>
-
-            <img id="npArt" src="" class="np-art">
-
-            <div class="vinyl-center"></div>
+            </div>
 
         </div>
 
     </div>
 
-    <h1 id="npTitle">Song Name</h1>
-    <h3 id="npArtist">Artist</h3>
 
-    <div class="np-controls">
 
-        <button id="npPrevBtn" class="glass-btn">
-            ⏮
+</footer>
+    <div id="nowPlayingScreen" class="now-playing hidden">
+
+        <div class="np-background"></div>
+
+        <button id="closeNowPlaying" class="close-btn">
+            ✕
         </button>
 
-        <button id="npPlayBtn" class="play-main-btn">
-            ▶
-        </button>
+        <div class="np-content">
 
-        <button id="npNextBtn" class="glass-btn">
-            ⏭
-        </button>
+            <!-- LEFT SIDE -->
+            <div class="np-left">
 
-    </div>
+                <div class="vinyl-wrapper">
 
-    <div class="np-progress-wrap">
-        <span id="npCurrent">0:00</span>
+                    <div class="record-player rotating" id="recordPlayer">
 
-        <input type="range" id="npProgress" value="0" min="0" max="100">
+                        <div class="vinyl-disc"></div>
 
-        <span id="npDuration">0:00</span>
-    </div>
+                        <img id="npArt"
+                             src=""
+                             class="np-art">
 
-</div>
+                        <div class="vinyl-center"></div>
 
-        
-        <div class="lyrics-panel">
-            <div class="lyrics">
+                    </div>
+
+                </div>
+
+                <h1 id="npTitle">Song Name</h1>
+
+                <h3 id="npArtist">Artist</h3>
+
+                <div class="np-controls">
+
+                    <button id="npPrevBtn" class="glass-btn">
+                        ⏮
+                    </button>
+
+                    <button id="npPlayBtn" class="play-main-btn">
+                        ▶
+                    </button>
+
+                    <button id="npNextBtn" class="glass-btn">
+                        ⏭
+                    </button>
+
+                </div>
+
+                <div class="np-progress-wrap">
+
+                    <span id="npCurrent">0:00</span>
+
+                    <input type="range"
+                           id="npProgress"
+                           value="0"
+                           min="0"
+                           max="100">
+
+                    <span id="npDuration">0:00</span>
+
+                </div>
+
+            </div>
+
+            <!-- LYRICS -->
+            <div class="lyrics-panel">
+
+                <div class="lyrics">
+
                     <div class="lyrics-container">
-    <div id="lyricsText">Loading lyrics...</pre>
-</div>
+
+                        <div id="lyricsText">
+                            Loading lyrics...
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
+
+        </div>
         </div>
 
-    </div>
-</div>
-    </footer>
+<!-- AUDIO -->
+<audio id="audioPlayer"></audio>
 
-    <audio id="audioPlayer"></audio>
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+<script src="index.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
-    <script src="index.js"></script>
 </body>
 </html>
