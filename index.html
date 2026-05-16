@@ -11,47 +11,52 @@
 </head>
 <body>
     <div class="container">
-       <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <h2>Halcyon</h2>
-        <button id="toggleSidebar" class="toggle-btn">☰</button>
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+            <h2>Halcyon</h2>
+            <button id="toggleSidebar" class="toggle-btn">☰</button>
     </div>
-    <ul>
-        <li>
-          <i class="fi fi-sr-home"></i>
-          <span>Home</span>
-        </li>
-        <li> 
-            <i class="fi fi-rr-clock-three"></i></i>
+    
+        <ul>
+         <li>
+            <i class="fi fi-sr-home"></i>
+            <span>Home</span>
+         </li>
+         <li>
+            <i class="fi fi-sr-time-forward"></i>
             <span>Recent</span>
-        </li>
-        <li> 
-            <i class="fi fi-rr-folder-open"></i>
+         </li>
+         <li>
+            <i class="fi fi-sr-book"></i>
             <span>Library</span>
-        </li>
-        <li>
-            <i class="fi fi-sr-settings"></i> 
+         </li>
+         <li>
+            <i class="fi fi-sr-settings"></i>
             <span>Settings</span>
-        </li>
-    </ul>
-</aside>
+         </li>
+        </ul>
+
+    
+    <div class="sidebar-actions">
+        <label for="fileInput" class="sidebar-add-btn">
+            <i class="fi fi-sr-music-alt"></i>
+            <span>Add Music</span>
+        </label>
+        
+        <button id="clearLibraryBtn" class="sidebar-clear-btn">
+            <i class="fi fi-rr-trash"></i>
+            <span>Clear Library</span>
+        </button>
+         </div>
+      </aside>
         
         <main class="main-content">
             
            
             <div class="file-picker">
-                <label for="fileInput" class="file-label">
-                    <i class="fi fi-sr-music-alt"></i> Select Music Files (MP3, FLAC, etc.)
-                </label>
+            
                 <input type="file" id="fileInput" multiple accept="audio/*">
             </div>
-            <!-- Add this after the file-picker div -->
-            <div style="margin-bottom: 20px;">
-             <button id="clearLibraryBtn" class="clear-btn">
-              <i class="fi fi-rr-trash"></i>  Clear All Music
-               </button>
-</div>
-
             
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Search songs...">
