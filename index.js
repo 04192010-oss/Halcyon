@@ -841,3 +841,4 @@ async function fetchLyrics(song) {
 ========================= */
 
 initDB();
+
