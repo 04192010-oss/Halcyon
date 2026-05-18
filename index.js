@@ -1,263 +1,843 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Halcyon</title>
+const sidebar = document.getElementById("sidebar");
+const toggleSidebar = document.getElementById("toggleSidebar");
 
-    <link rel="icon" type="image/png" href="images/halcyon.webp">
-    <link rel="stylesheet" href="styles.css">
+const fileInput = document.getElementById("fileInput");
+const albumRow = document.getElementById("albumRow");
+const songRow = document.getElementById("songRow");
+const searchInput = document.getElementById("searchInput");
 
-    <!-- Icon libraries from Flaticon -->
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-solid-rounded/css/uicons-solid-rounded.css">
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
-</head>
+const audioPlayer = document.getElementById("audioPlayer");
 
-<body>
+const playBtn = document.getElementById("PlayBtn");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
 
-<div class="container">
+const currentTitle = document.getElementById("currentTitle");
+const currentArtist = document.getElementById("currentArtist");
+const playerArt = document.getElementById("playerArt");
 
-    <!-- =====================
-         SIDEBAR
-         Left navigation panel with page links and library controls.
-    ===================== -->
-    <aside class="sidebar" id="sidebar">
+const progressBar = document.getElementById("progressBar");
+const currentTimeEl = document.getElementById("currentTime");
+const durationText = document.getElementById("duration");
 
-        <div class="sidebar-header">
-            <h2>Halcyon</h2>
-            <!-- Collapse/expand the sidebar -->
-            <button id="toggleSidebar" class="toggle-btn">
-                <i class="fi fi-sr-menu-burger"></i>
-            </button>
-        </div>
+const volumeSlider = document.getElementById("volumeSlider");
 
-        <!-- Navigation links (currently cosmetic — no routing yet) -->
-        <ul>
-            <li>
-                <i class="fi fi-sr-home"></i>
-                <span>Home</span>
-            </li>
-            <li>
-                <i class="fi fi-sr-time-forward"></i>
-                <span>Recent</span>
-            </li>
-            <li>
-                <i class="fi fi-sr-book"></i>
-                <span>Library</span>
-            </li>
-            <li>
-                <i class="fi fi-sr-settings"></i>
-                <span>Settings</span>
-            </li>
-        </ul>
+const nowPlayingScreen = document.getElementById("nowPlayingScreen");
+const closeNowPlaying = document.getElementById("closeNowPlaying");
 
-        <!-- Library action buttons at the bottom of the sidebar -->
-        <div class="sidebar-actions">
+const npArt = document.getElementById("npArt");
+const npTitle = document.getElementById("npTitle");
+const npArtist = document.getElementById("npArtist");
 
-            <!-- Clicking this label triggers the hidden file input below -->
-            <label for="fileInput" class="sidebar-add-btn">
-                <i class="fi fi-sr-music-alt"></i>
-                <span>Add Music</span>
-            </label>
+const npPlayBtn = document.getElementById("npPlayBtn");
+const npPrevBtn = document.getElementById("npPrevBtn");
+const npNextBtn = document.getElementById("npNextBtn");
 
-            <button id="clearLibraryBtn" class="sidebar-clear-btn">
-                <i class="fi fi-rr-trash"></i>
-                <span>Clear Library</span>
-            </button>
+const npProgress = document.getElementById("npProgress");
+const npCurrent = document.getElementById("npCurrent");
+const npDuration = document.getElementById("npDuration");
 
-        </div>
+const recordPlayer = document.getElementById("recordPlayer");
 
-    </aside>
+const clearLibraryBtn = document.getElementById("clearLibraryBtn");
+const infiniteRadioBtn = document.getElementById("infiniteRadioBtn");
+const sortSelect = document.getElementById("sortSelect");
 
-    <!-- =====================
-         MAIN CONTENT
-         Holds the search bar, album grid, and song list.
-    ===================== -->
-    <main class="main-content">
+let db;
 
-        <!-- Hidden file input — triggered by the "Add Music" label in the sidebar -->
-        <div class="file-picker">
-            <input type="file" id="fileInput" multiple accept="audio/*" style="display:none;">
-        </div>
+const DB_NAME = "HalcyonMusic";
+const DB_VERSION = 1;
 
-        <!-- Search bar — filters songs by title, artist, or album in real time -->
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Search songs...">
-        </div>
+const albums = {};
 
-        <!-- Album cards, auto-generated from loaded songs -->
-        <section class="albums">
-            <h2>Your Albums</h2>
-            <div id="albumRow" class="album-row"></div>
-        </section>
+let allSongs = [];
+let currentSongs = [];
 
-        <!-- Song list with sort and Infinite Radio controls -->
-        <section class="recommended-songs">
+let currentIndex = 0;
+let currentSort = "title";
+let isInfiniteRadio = false;
 
-            <div class="section-header">
+/* =========================
+   SIDEBAR
+========================= */
 
-                <!-- Title changes when filtering by album or enabling Infinite Radio -->
-                <h2 id="songSectionTitle">All Songs</h2>
+toggleSidebar.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+});
 
-                <div class="sort-container">
+/* =========================
+   DATABASE
+========================= */
 
-                    <!-- Shuffles all songs and plays them in random order -->
-                    <button id="infiniteRadioBtn" class="infinite-radio-btn">
-                        <i class="fi fi-sr-radio-tower"></i>
-                        Infinite Radio
-                    </button>
+function initDB() {
 
-                    <!-- Sort the song list by title, artist, or album -->
-                    <select id="sortSelect" class="sort-select">
-                        <option value="title">Sort by Title</option>
-                        <option value="artist">Sort by Artist</option>
-                        <option value="album">Sort by Album</option>
-                    </select>
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-                </div>
+    request.onupgradeneeded = (event) => {
 
-            </div>
+        db = event.target.result;
 
-            <!-- Song cards are injected here by JavaScript -->
-            <div id="songRow" class="song-row"></div>
+        if (!db.objectStoreNames.contains("songs")) {
 
-        </section>
+            db.createObjectStore("songs", {
+                keyPath: "id",
+                autoIncrement: true
+            });
 
-    </main>
+        }
 
-</div>
+    };
 
-<!-- =====================
-     FLOATING PLAYER
-     Fixed to the bottom of the screen. Shows current track info,
-     playback controls, a seek bar, and volume slider.
-===================== -->
-<footer class="player" id="player">
+    request.onsuccess = (event) => {
 
-    <div class="player-content">
+        db = event.target.result;
 
-        <!-- LEFT: Album art, song name, artist, and like button -->
-        <div class="song-info">
+        loadSavedSongs();
 
-            <!-- Clicking the album art opens the full Now Playing screen -->
-            <img id="playerArt" src="https://via.placeholder.com/80" alt="Album Art">
+    };
 
+    request.onerror = () => {
+        console.error("IndexedDB Error");
+    };
+
+}
+
+function saveSong(song) {
+
+    const transaction = db.transaction("songs", "readwrite");
+
+    const store = transaction.objectStore("songs");
+
+    store.add(song);
+
+}
+
+function loadSavedSongs() {
+
+    const transaction = db.transaction("songs", "readonly");
+
+    const store = transaction.objectStore("songs");
+
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+
+        allSongs = request.result || [];
+
+        for (let key in albums) {
+            delete albums[key];
+        }
+
+        allSongs.forEach(song => {
+
+            if (song.imageBlob) {
+
+                song.imageUrl = URL.createObjectURL(song.imageBlob);
+
+            } else {
+
+                song.imageUrl =
+                    "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+
+            }
+
+            if (!albums[song.album]) {
+                albums[song.album] = [];
+            }
+
+            albums[song.album].push(song);
+
+        });
+
+        currentSongs = allSongs;
+
+        renderAlbums();
+        renderAllSongs();
+
+    };
+
+}
+
+/* =========================
+   HELPERS
+========================= */
+
+function formatTime(seconds) {
+
+    if (isNaN(seconds) || seconds === Infinity) {
+        return "0:00";
+    }
+
+    const mins = Math.floor(seconds / 60);
+
+    const secs = Math.floor(seconds % 60);
+
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+
+}
+
+function sortSongs(songs, criteria) {
+
+    return [...songs].sort((a, b) => {
+
+        let valA;
+        let valB;
+
+        switch (criteria) {
+
+            case "artist":
+                valA = a.artist.toLowerCase();
+                valB = b.artist.toLowerCase();
+                break;
+
+            case "album":
+                valA = a.album.toLowerCase();
+                valB = b.album.toLowerCase();
+                break;
+
+            case "title":
+            default:
+                valA = a.title.toLowerCase();
+                valB = b.title.toLowerCase();
+
+        }
+
+        return valA.localeCompare(valB);
+
+    });
+
+}
+
+/* =========================
+   FILE INPUT
+========================= */
+
+fileInput.addEventListener("change", (event) => {
+
+    const files = event.target.files;
+
+    const audioFiles = Array.from(files).filter(file =>
+        file.type.startsWith("audio/")
+    );
+
+    audioFiles.forEach(file => {
+
+        jsmediatags.read(file, {
+
+            onSuccess: (tag) => {
+
+                const title =
+                    tag.tags.title ||
+                    file.name.replace(/\.[^/.]+$/, "");
+
+                const artist =
+                    tag.tags.artist || "Unknown Artist";
+
+                const albumName =
+                    tag.tags.album || "Unknown Album";
+
+                const picture = tag.tags.picture;
+
+                let imageBlob = null;
+
+                let imageUrl =
+                    "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
+
+                if (picture) {
+
+                    imageBlob = new Blob(
+                        [new Uint8Array(picture.data)],
+                        { type: picture.format }
+                    );
+
+                    imageUrl = URL.createObjectURL(imageBlob);
+
+                }
+
+                const song = {
+
+                    title,
+                    artist,
+
+                    album: albumName,
+
+                    fileName: file.name,
+                    fileType: file.type,
+
+                    fileData: file,
+
+                    imageBlob,
+                    imageUrl
+
+                };
+
+                saveSong(song);
+
+                allSongs.push(song);
+
+                if (!albums[albumName]) {
+                    albums[albumName] = [];
+                }
+
+                albums[albumName].push(song);
+
+                renderAlbums();
+                renderAllSongs();
+
+            },
+
+            onError: (err) => {
+
+                console.error(
+                    "Error reading file:",
+                    file.name,
+                    err
+                );
+
+            }
+
+        });
+
+    });
+
+});
+
+/* =========================
+   RENDER ALBUMS
+========================= */
+
+function renderAlbums() {
+
+    albumRow.innerHTML = "";
+
+    Object.keys(albums).forEach(albumName => {
+
+        const songs = albums[albumName];
+
+        const card = document.createElement("div");
+
+        card.className = "album-card";
+
+        card.innerHTML = `
+            <img src="${songs[0].imageUrl}" alt="${albumName}">
+            <p>${albumName}</p>
+        `;
+
+        card.onclick = () => {
+
+            currentSongs = songs;
+
+            playSong(0);
+
+            document.getElementById(
+                "songSectionTitle"
+            ).textContent = albumName;
+
+        };
+
+        albumRow.appendChild(card);
+
+    });
+
+}
+
+/* =========================
+   RENDER SONGS
+========================= */
+
+function renderAllSongs(filteredSongs = allSongs) {
+
+    songRow.innerHTML = "";
+
+    const sortedSongs = sortSongs(
+        filteredSongs,
+        currentSort
+    );
+
+    sortedSongs.forEach((song, index) => {
+
+        const card = document.createElement("div");
+
+        card.className = "song-card";
+
+        card.innerHTML = `
+            <img src="${song.imageUrl}" alt="">
             <div class="song-info-text">
-                <div id="currentTitle" class="title">No song playing</div>
-                <div id="currentArtist" class="artist">Select music files to begin</div>
+                <h4>${song.title}</h4>
+                <p>${song.artist} • ${song.album}</p>
             </div>
+        `;
 
-            <!-- Like/favourite button (visual only for now) -->
-            <button id="likeBtn" class="player-btn">♡</button>
+        card.onclick = () => {
 
-        </div>
+            currentSongs = sortedSongs;
 
-        <!-- CENTER: Play/pause, prev/next, and the seek bar -->
-        <div class="player-center">
+            playSong(index);
 
-            <div class="controls">
-                <button id="prevBtn" class="player-btn">
-                    <i class="fi fi-rr-arrow-small-left"></i>
-                </button>
-                <button id="PlayBtn" class="play-main-btn">
-                    <i class="fi fi-sr-play"></i>
-                </button>
-                <button id="nextBtn" class="player-btn">
-                    <i class="fi fi-rr-arrow-small-right"></i>
-                </button>
-            </div>
+        };
 
-            <div class="progress-area">
-                <span id="currentTime">0:00</span>
-                <input type="range" id="progressBar" value="0" min="0" max="100">
-                <span id="duration">0:00</span>
-            </div>
+        songRow.appendChild(card);
 
-        </div>
+    });
 
-        <!-- RIGHT: Shuffle, repeat, and volume -->
-        <div class="player-right">
-            <button class="player-btn"><i class="fi fi-sr-shuffle"></i></button>
-            <button class="player-btn"><i class="fi fi-sr-loop-square"></i></button>
+}
 
-            <div class="volume-control">
-                <span><i class="fi fi-sr-volume"></i></span>
-                <input type="range" id="volumeSlider" value="1" min="0" max="1" step="0.01">
-            </div>
-        </div>
+/* =========================
+   PLAY SONG
+========================= */
 
-    </div>
+function playSong(index) {
 
-</footer>
+    if (index < 0 || index >= currentSongs.length) {
+        return;
+    }
 
-<!-- =====================
-     NOW PLAYING SCREEN
-     Full-screen overlay with the spinning vinyl record, song controls,
-     and a lyrics panel on the right side.
-===================== -->
-<div id="nowPlayingScreen" class="now-playing hidden">
+    currentIndex = index;
 
-    <!-- Blurred album art fills the background -->
-    <div class="np-background"></div>
+    const song = currentSongs[index];
 
-    <!-- Close button returns to the main view -->
-    <button id="closeNowPlaying" class="close-btn">✕</button>
+    const url = URL.createObjectURL(song.fileData);
 
-    <div class="np-content">
+    audioPlayer.src = url;
 
-        <!-- LEFT: Vinyl record, song info, controls, seek bar -->
-        <div class="np-left">
+    currentTitle.textContent = song.title;
+    currentArtist.textContent = song.artist;
 
-            <div class="vinyl-wrapper">
-                <div class="record-player rotating" id="recordPlayer">
-                    <div class="vinyl-disc"></div>
-                    <img id="npArt" src="" class="np-art">
-                    <div class="vinyl-center"></div>
-                </div>
-            </div>
+    playerArt.src = song.imageUrl;
 
-            <h1 id="npTitle">Song Name</h1>
-            <h3 id="npArtist">Artist</h3>
+    npTitle.textContent = song.title;
+    npArtist.textContent = song.artist;
 
-            <div class="np-controls">
-                <button id="npPrevBtn" class="glass-btn">
-                    <i class="fi fi-rr-arrow-small-left"></i>
-                </button>
-                <button id="npPlayBtn" class="play-main-btn">
-                    <i class="fi fi-sr-play"></i>
-                </button>
-                <button id="npNextBtn" class="glass-btn">
-                    <i class="fi fi-sr-arrow-small-right"></i>
-                </button>
-            </div>
+    npArt.src = song.imageUrl;
 
-            <div class="np-progress-wrap">
-                <span id="npCurrent">0:00</span>
-                <input type="range" id="npProgress" value="0" min="0" max="100">
-                <span id="npDuration">0:00</span>
-            </div>
+    document.querySelector(".np-background")
+        .style.backgroundImage =
+        `url(${song.imageUrl})`;
 
-        </div>
+    fetchLyrics(song);
 
-        <!-- RIGHT: Lyrics fetched from lrclib.net -->
-        <div class="lyrics-panel">
-            <div class="lyrics">
-                <div class="lyrics-container">
-                    <div id="lyricsText">Loading lyrics...</div>
-                </div>
-            </div>
-        </div>
+    audioPlayer.play().catch(err => console.error(err));
 
-    </div>
+    playBtn.textContent = "⏸";
+    npPlayBtn.textContent = "⏸";
 
-</div>
+    recordPlayer.classList.remove("paused-spin");
 
-<!-- The actual audio element — hidden, controlled entirely by JS -->
-<audio id="audioPlayer"></audio>
+}
 
-<!-- jsmediatags reads ID3 tags (title, artist, album, cover art) from audio files -->
-<script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
-<script src="index.js"></script>
+/* =========================
+   PLAYER CONTROLS
+========================= */
 
-</body>
-</html>
+playBtn.addEventListener("click", () => {
+
+    if (audioPlayer.paused) {
+
+        audioPlayer.play();
+
+    } else {
+
+        audioPlayer.pause();
+
+    }
+
+});
+
+npPlayBtn.addEventListener("click", () => {
+
+    if (audioPlayer.paused) {
+
+        audioPlayer.play();
+
+    } else {
+
+        audioPlayer.pause();
+
+    }
+
+});
+
+audioPlayer.addEventListener("play", () => {
+
+    playBtn.textContent = "⏸";
+    npPlayBtn.textContent = "⏸";
+
+    recordPlayer.classList.remove("paused-spin");
+
+});
+
+audioPlayer.addEventListener("pause", () => {
+
+    playBtn.textContent = "▶";
+    npPlayBtn.textContent = "▶";
+
+    recordPlayer.classList.add("paused-spin");
+
+});
+
+prevBtn.addEventListener("click", () => {
+    playSong(currentIndex - 1);
+});
+
+nextBtn.addEventListener("click", () => {
+    playSong(currentIndex + 1);
+});
+
+npPrevBtn.addEventListener("click", () => {
+    playSong(currentIndex - 1);
+});
+
+npNextBtn.addEventListener("click", () => {
+    playSong(currentIndex + 1);
+});
+
+/* =========================
+   PROGRESS
+========================= */
+
+audioPlayer.addEventListener("timeupdate", () => {
+
+    if (audioPlayer.duration) {
+
+        const progress =
+            (audioPlayer.currentTime /
+                audioPlayer.duration) * 100;
+
+        progressBar.value = progress;
+        npProgress.value = progress;
+
+        currentTimeEl.textContent =
+            formatTime(audioPlayer.currentTime);
+
+        npCurrent.textContent =
+            formatTime(audioPlayer.currentTime);
+
+        durationText.textContent =
+            formatTime(audioPlayer.duration);
+
+        npDuration.textContent =
+            formatTime(audioPlayer.duration);
+
+    }
+
+});
+
+progressBar.addEventListener("input", () => {
+
+    audioPlayer.currentTime =
+        (progressBar.value / 100) *
+        audioPlayer.duration;
+
+});
+
+npProgress.addEventListener("input", () => {
+
+    audioPlayer.currentTime =
+        (npProgress.value / 100) *
+        audioPlayer.duration;
+
+});
+
+/* =========================
+   VOLUME
+========================= */
+
+volumeSlider.addEventListener("input", () => {
+
+    audioPlayer.volume =
+        parseFloat(volumeSlider.value);
+
+});
+
+/* =========================
+   SEARCH
+========================= */
+
+searchInput.addEventListener("input", () => {
+
+    const term =
+        searchInput.value.toLowerCase().trim();
+
+    if (term === "") {
+
+        renderAllSongs(allSongs);
+
+        return;
+
+    }
+
+    const filtered = allSongs.filter(song =>
+
+        song.title.toLowerCase().includes(term) ||
+        song.artist.toLowerCase().includes(term) ||
+        song.album.toLowerCase().includes(term)
+
+    );
+
+    renderAllSongs(filtered);
+
+});
+
+/* =========================
+   SORT
+========================= */
+
+sortSelect.addEventListener("change", (e) => {
+
+    currentSort = e.target.value;
+
+    renderAllSongs(allSongs);
+
+});
+
+/* =========================
+   CLEAR LIBRARY
+========================= */
+
+clearLibraryBtn.addEventListener("click", () => {
+
+    const transaction =
+        db.transaction("songs", "readwrite");
+
+    const store =
+        transaction.objectStore("songs");
+
+    const request = store.clear();
+
+    request.onsuccess = () => {
+
+        allSongs = [];
+        currentSongs = [];
+
+        for (let key in albums) {
+            delete albums[key];
+        }
+
+        albumRow.innerHTML = "";
+        songRow.innerHTML = "";
+
+        currentTitle.textContent =
+            "No song playing";
+
+        currentArtist.textContent =
+            "Select music files to begin";
+
+        playerArt.src =
+            "https://via.placeholder.com/80";
+
+        audioPlayer.pause();
+        audioPlayer.src = "";
+
+        alert("Music library cleared!");
+
+    };
+
+});
+
+/* =========================
+   NOW PLAYING SCREEN
+========================= */
+
+playerArt.addEventListener("click", () => {
+
+    nowPlayingScreen.classList.remove("hidden");
+
+    npArt.src = playerArt.src;
+
+    npTitle.textContent =
+        currentTitle.textContent;
+
+    npArtist.textContent =
+        currentArtist.textContent;
+
+    document.querySelector(".np-background")
+        .style.backgroundImage =
+        `url(${playerArt.src})`;
+
+});
+
+closeNowPlaying.addEventListener("click", () => {
+
+    nowPlayingScreen.classList.add("hidden");
+
+});
+
+/* =========================
+   INFINITE RADIO
+========================= */
+
+infiniteRadioBtn.addEventListener("click", () => {
+
+    if (allSongs.length === 0) {
+
+        alert("Add some songs first!");
+
+        return;
+
+    }
+
+    isInfiniteRadio = true;
+
+    infiniteRadioBtn.classList.add("active");
+
+    currentSongs = [...allSongs].sort(
+        () => Math.random() - 0.5
+    );
+
+    const randomIndex =
+        Math.floor(Math.random() *
+            currentSongs.length);
+
+    playSong(randomIndex);
+
+    document.getElementById(
+        "songSectionTitle"
+    ).textContent = "Infinite Radio";
+
+});
+
+/* =========================
+   SONG END
+========================= */
+
+audioPlayer.addEventListener("ended", () => {
+
+    if (
+        isInfiniteRadio &&
+        currentSongs.length > 1
+    ) {
+
+        let nextIndex =
+            Math.floor(
+                Math.random() *
+                currentSongs.length
+            );
+
+        while (
+            nextIndex === currentIndex &&
+            currentSongs.length > 1
+        ) {
+
+            nextIndex =
+                Math.floor(
+                    Math.random() *
+                    currentSongs.length
+                );
+
+        }
+
+        playSong(nextIndex);
+
+    } else {
+
+        playSong(currentIndex + 1);
+
+    }
+
+});
+
+/* =========================
+   LYRICS
+========================= */
+
+async function fetchLyrics(song) {
+
+    const lyricsText =
+        document.getElementById("lyricsText");
+
+    if (!lyricsText) return;
+
+    lyricsText.textContent =
+        "Loading lyrics...";
+
+    const track =
+        encodeURIComponent(song.title);
+
+    const artist =
+        encodeURIComponent(song.artist);
+
+    const lrclibUrl =
+        `https://lrclib.net/api/search?track_name=${track}&artist_name=${artist}`;
+
+    const attempts = [
+
+        {
+            url: lrclibUrl,
+            wrapped: false
+        },
+
+        {
+            url:
+            `https://corsproxy.io/?url=${encodeURIComponent(lrclibUrl)}`,
+            wrapped: false
+        },
+
+        {
+            url:
+            `https://api.allorigins.win/get?url=${encodeURIComponent(lrclibUrl)}`,
+            wrapped: true
+        }
+
+    ];
+
+    for (let i = 0; i < attempts.length; i++) {
+
+        try {
+
+            const response =
+                await fetch(attempts[i].url);
+
+            if (!response.ok) continue;
+
+            let data =
+                await response.json();
+
+            if (attempts[i].wrapped) {
+                data = JSON.parse(data.contents);
+            }
+
+            if (data.length > 0) {
+
+                const lyrics =
+                    data[0].plainLyrics ||
+                    data[0].syncedLyrics
+                    ?.replace(
+                        /\[\d+:\d+\.\d+\]/g,
+                        ""
+                    )
+                    .trim();
+
+                lyricsText.textContent =
+                    lyrics ||
+                    "No lyrics available.";
+
+            } else {
+
+                lyricsText.textContent =
+                    "Lyrics not found.";
+
+            }
+
+            return;
+
+        } catch (error) {
+
+            console.warn(
+                `Attempt ${i + 1} failed:`,
+                error
+            );
+
+        }
+
+    }
+
+    lyricsText.textContent =
+        "Failed to load lyrics.";
+
+}
+
+/* =========================
+   START
+========================= */
+
+initDB();
