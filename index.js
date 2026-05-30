@@ -63,19 +63,19 @@ let isInfiniteRadio = false;
 
 async function loadDemoSongs() {
     const demoSongs = [
-        {
-            title: "Heliograph",
-            artist: "Chris Zabriskie",
-            album: "Divider",
-            path: "divider/01 - Chris Zabriskie - Heliograph.flac"
-        },
-        {
-            title: "Oxygen Garden",
-            artist: "Chris Zabriskie",
-            album: "Divider",
-            path: "divider/05 - Chris Zabriskie - Oxygen Garden.flac"
-        }
-    ];
+    {  
+        title: "Heliograph",
+        artist: "Chris Zabriskie",
+        album: "Divider",
+        path: "divider/01 - Chris Zabriskie - Heliograph.mp3"
+    },
+    {
+        title: "Oxygen Garden",
+        artist: "Chris Zabriskie",
+        album: "Divider",
+        path: "divider/05 - Chris Zabriskie - Oxygen Garden.mp3"
+    }
+];
 
     let loadedAny = false;
 
