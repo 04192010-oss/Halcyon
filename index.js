@@ -58,6 +58,71 @@ let currentSort = "title";
 let isInfiniteRadio = false;
 
 /* =========================
+   DEMO SONGS
+========================= */
+
+async function loadDemoSongs() {
+    const demoSongs = [
+        {
+            title: "Heliograph",
+            artist: "Chris Zabriskie",
+            album: "Divider",
+            path: "divider/01 - Chris Zabriskie - Heliograph.flac"
+        },
+        {
+            title: "Oxygen Garden",
+            artist: "Chris Zabriskie",
+            album: "Divider",
+            path: "divider/05 - Chris Zabriskie - Oxygen Garden.flac"
+        }
+    ];
+
+    let loadedAny = false;
+
+    for (const demo of demoSongs) {
+        try {
+            const response = await fetch(demo.path);
+
+            if (!response.ok) {
+                console.warn(`Demo file not found: ${demo.path} (${response.status})`);
+                continue;
+            }
+
+            const blob = await response.blob();
+
+            const song = {
+                title: demo.title,
+                artist: demo.artist,
+                album: demo.album,
+                fileData: blob,
+                imageUrl: "divider/cover.jpg"
+            };
+
+            allSongs.push(song);
+
+            if (!albums[demo.album]) {
+                albums[demo.album] = [];
+            }
+
+            albums[demo.album].push(song);
+            loadedAny = true;
+
+        } catch (err) {
+            console.warn(`Failed to load demo song: ${demo.path}`, err);
+        }
+    }
+
+    currentSongs = allSongs;
+
+    if (loadedAny) {
+        renderAlbums();
+        renderAllSongs();
+    } else {
+        console.info("No demo songs could be loaded. Add audio files via 'Add Music'.");
+    }
+}
+
+/* =========================
    SIDEBAR
 ========================= */
 
@@ -70,75 +135,58 @@ toggleSidebar.addEventListener("click", () => {
 ========================= */
 
 function initDB() {
-
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
-
         db = event.target.result;
 
         if (!db.objectStoreNames.contains("songs")) {
-
             db.createObjectStore("songs", {
                 keyPath: "id",
                 autoIncrement: true
             });
-
         }
-
     };
 
     request.onsuccess = (event) => {
-
         db = event.target.result;
-
         loadSavedSongs();
-
     };
 
     request.onerror = () => {
         console.error("IndexedDB Error");
     };
-
 }
 
 function saveSong(song) {
-
     const transaction = db.transaction("songs", "readwrite");
-
     const store = transaction.objectStore("songs");
-
     store.add(song);
-
 }
 
 function loadSavedSongs() {
-
     const transaction = db.transaction("songs", "readonly");
-
     const store = transaction.objectStore("songs");
-
     const request = store.getAll();
 
-    request.onsuccess = () => {
-
+    request.onsuccess = async () => {
         allSongs = request.result || [];
+
+        if (allSongs.length === 0) {
+            await loadDemoSongs();
+            return;
+        }
 
         for (let key in albums) {
             delete albums[key];
         }
 
         allSongs.forEach(song => {
-
             if (song.imageBlob) {
-
                 song.imageUrl = URL.createObjectURL(song.imageBlob);
-
             } else {
-
                 song.imageUrl =
                     "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
-
             }
 
             if (!albums[song.album]) {
@@ -146,16 +194,13 @@ function loadSavedSongs() {
             }
 
             albums[song.album].push(song);
-
         });
 
         currentSongs = allSongs;
 
         renderAlbums();
         renderAllSongs();
-
     };
-
 }
 
 /* =========================
@@ -163,49 +208,38 @@ function loadSavedSongs() {
 ========================= */
 
 function formatTime(seconds) {
-
     if (isNaN(seconds) || seconds === Infinity) {
         return "0:00";
     }
 
     const mins = Math.floor(seconds / 60);
-
     const secs = Math.floor(seconds % 60);
 
     return `${mins}:${secs.toString().padStart(2, "0")}`;
-
 }
 
 function sortSongs(songs, criteria) {
-
     return [...songs].sort((a, b) => {
-
         let valA;
         let valB;
 
         switch (criteria) {
-
             case "artist":
                 valA = a.artist.toLowerCase();
                 valB = b.artist.toLowerCase();
                 break;
-
             case "album":
                 valA = a.album.toLowerCase();
                 valB = b.album.toLowerCase();
                 break;
-
             case "title":
             default:
                 valA = a.title.toLowerCase();
                 valB = b.title.toLowerCase();
-
         }
 
         return valA.localeCompare(valB);
-
     });
-
 }
 
 /* =========================
@@ -213,7 +247,6 @@ function sortSongs(songs, criteria) {
 ========================= */
 
 fileInput.addEventListener("change", (event) => {
-
     const files = event.target.files;
 
     const audioFiles = Array.from(files).filter(file =>
@@ -221,11 +254,8 @@ fileInput.addEventListener("change", (event) => {
     );
 
     audioFiles.forEach(file => {
-
         jsmediatags.read(file, {
-
             onSuccess: (tag) => {
-
                 const title =
                     tag.tags.title ||
                     file.name.replace(/\.[^/.]+$/, "");
@@ -239,40 +269,29 @@ fileInput.addEventListener("change", (event) => {
                 const picture = tag.tags.picture;
 
                 let imageBlob = null;
-
                 let imageUrl =
                     "https://via.placeholder.com/300x300/2a2a44/ffffff?text=No+Cover";
 
                 if (picture) {
-
                     imageBlob = new Blob(
                         [new Uint8Array(picture.data)],
                         { type: picture.format }
                     );
-
                     imageUrl = URL.createObjectURL(imageBlob);
-
                 }
 
                 const song = {
-
                     title,
                     artist,
-
                     album: albumName,
-
                     fileName: file.name,
                     fileType: file.type,
-
                     fileData: file,
-
                     imageBlob,
                     imageUrl
-
                 };
 
                 saveSong(song);
-
                 allSongs.push(song);
 
                 if (!albums[albumName]) {
@@ -283,23 +302,13 @@ fileInput.addEventListener("change", (event) => {
 
                 renderAlbums();
                 renderAllSongs();
-
             },
 
             onError: (err) => {
-
-                console.error(
-                    "Error reading file:",
-                    file.name,
-                    err
-                );
-
+                console.error("Error reading file:", file.name, err);
             }
-
         });
-
     });
-
 });
 
 /* =========================
@@ -307,15 +316,12 @@ fileInput.addEventListener("change", (event) => {
 ========================= */
 
 function renderAlbums() {
-
     albumRow.innerHTML = "";
 
     Object.keys(albums).forEach(albumName => {
-
         const songs = albums[albumName];
 
         const card = document.createElement("div");
-
         card.className = "album-card";
 
         card.innerHTML = `
@@ -324,21 +330,13 @@ function renderAlbums() {
         `;
 
         card.onclick = () => {
-
             currentSongs = songs;
-
             playSong(0);
-
-            document.getElementById(
-                "songSectionTitle"
-            ).textContent = albumName;
-
+            document.getElementById("songSectionTitle").textContent = albumName;
         };
 
         albumRow.appendChild(card);
-
     });
-
 }
 
 /* =========================
@@ -346,18 +344,12 @@ function renderAlbums() {
 ========================= */
 
 function renderAllSongs(filteredSongs = allSongs) {
-
     songRow.innerHTML = "";
 
-    const sortedSongs = sortSongs(
-        filteredSongs,
-        currentSort
-    );
+    const sortedSongs = sortSongs(filteredSongs, currentSort);
 
     sortedSongs.forEach((song, index) => {
-
         const card = document.createElement("div");
-
         card.className = "song-card";
 
         card.innerHTML = `
@@ -369,17 +361,12 @@ function renderAllSongs(filteredSongs = allSongs) {
         `;
 
         card.onclick = () => {
-
             currentSongs = sortedSongs;
-
             playSong(index);
-
         };
 
         songRow.appendChild(card);
-
     });
-
 }
 
 /* =========================
@@ -387,42 +374,45 @@ function renderAllSongs(filteredSongs = allSongs) {
 ========================= */
 
 function playSong(index) {
-
-    if (index < 0 || index >= currentSongs.length) {
-        return;
-    }
+    if (index < 0 || index >= currentSongs.length) return;
 
     currentIndex = index;
 
     const song = currentSongs[index];
 
-    const url = URL.createObjectURL(song.fileData);
-
-    audioPlayer.src = url;
+    audioPlayer.src = URL.createObjectURL(song.fileData);
 
     currentTitle.textContent = song.title;
     currentArtist.textContent = song.artist;
-
     playerArt.src = song.imageUrl;
 
     npTitle.textContent = song.title;
     npArtist.textContent = song.artist;
-
     npArt.src = song.imageUrl;
 
-    document.querySelector(".np-background")
-        .style.backgroundImage =
+    document.querySelector(".np-background").style.backgroundImage =
         `url(${song.imageUrl})`;
 
     fetchLyrics(song);
 
     audioPlayer.play().catch(err => console.error(err));
 
-    playBtn.textContent = "⏸";
-    npPlayBtn.textContent = "⏸";
-
+    setPlayingState(true);
     recordPlayer.classList.remove("paused-spin");
+}
 
+/* =========================
+   PLAY STATE HELPER
+========================= */
+
+function setPlayingState(playing) {
+    if (playing) {
+        playBtn.innerHTML = '<i class="fi fi-sr-pause"></i>';
+        npPlayBtn.innerHTML = '<i class="fi fi-sr-pause"></i>';
+    } else {
+        playBtn.innerHTML = '<i class="fi fi-sr-play"></i>';
+        npPlayBtn.innerHTML = '<i class="fi fi-sr-play"></i>';
+    }
 }
 
 /* =========================
@@ -430,112 +420,61 @@ function playSong(index) {
 ========================= */
 
 playBtn.addEventListener("click", () => {
-
     if (audioPlayer.paused) {
-
         audioPlayer.play();
-
     } else {
-
         audioPlayer.pause();
-
     }
-
 });
 
 npPlayBtn.addEventListener("click", () => {
-
     if (audioPlayer.paused) {
-
         audioPlayer.play();
-
     } else {
-
         audioPlayer.pause();
-
     }
-
 });
 
 audioPlayer.addEventListener("play", () => {
-
-    playBtn.textContent = "⏸";
-    npPlayBtn.textContent = "⏸";
-
+    setPlayingState(true);
     recordPlayer.classList.remove("paused-spin");
-
 });
 
 audioPlayer.addEventListener("pause", () => {
-
-    playBtn.textContent = "▶";
-    npPlayBtn.textContent = "▶";
-
+    setPlayingState(false);
     recordPlayer.classList.add("paused-spin");
-
 });
 
-prevBtn.addEventListener("click", () => {
-    playSong(currentIndex - 1);
-});
-
-nextBtn.addEventListener("click", () => {
-    playSong(currentIndex + 1);
-});
-
-npPrevBtn.addEventListener("click", () => {
-    playSong(currentIndex - 1);
-});
-
-npNextBtn.addEventListener("click", () => {
-    playSong(currentIndex + 1);
-});
+prevBtn.addEventListener("click", () => playSong(currentIndex - 1));
+nextBtn.addEventListener("click", () => playSong(currentIndex + 1));
+npPrevBtn.addEventListener("click", () => playSong(currentIndex - 1));
+npNextBtn.addEventListener("click", () => playSong(currentIndex + 1));
 
 /* =========================
    PROGRESS
 ========================= */
 
 audioPlayer.addEventListener("timeupdate", () => {
-
     if (audioPlayer.duration) {
-
-        const progress =
-            (audioPlayer.currentTime /
-                audioPlayer.duration) * 100;
+        const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
 
         progressBar.value = progress;
         npProgress.value = progress;
 
-        currentTimeEl.textContent =
-            formatTime(audioPlayer.currentTime);
+        currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        npCurrent.textContent = formatTime(audioPlayer.currentTime);
 
-        npCurrent.textContent =
-            formatTime(audioPlayer.currentTime);
-
-        durationText.textContent =
-            formatTime(audioPlayer.duration);
-
-        npDuration.textContent =
-            formatTime(audioPlayer.duration);
-
+        durationText.textContent = formatTime(audioPlayer.duration);
+        npDuration.textContent = formatTime(audioPlayer.duration);
     }
-
 });
 
 progressBar.addEventListener("input", () => {
-
-    audioPlayer.currentTime =
-        (progressBar.value / 100) *
-        audioPlayer.duration;
-
+    audioPlayer.currentTime = (progressBar.value / 100) * audioPlayer.duration;
 });
 
 npProgress.addEventListener("input", () => {
-
-    audioPlayer.currentTime =
-        (npProgress.value / 100) *
-        audioPlayer.duration;
-
+    audioPlayer.currentTime = (npProgress.value / 100) * audioPlayer.duration;
 });
 
 /* =========================
@@ -543,10 +482,7 @@ npProgress.addEventListener("input", () => {
 ========================= */
 
 volumeSlider.addEventListener("input", () => {
-
-    audioPlayer.volume =
-        parseFloat(volumeSlider.value);
-
+    audioPlayer.volume = parseFloat(volumeSlider.value);
 });
 
 /* =========================
@@ -554,28 +490,20 @@ volumeSlider.addEventListener("input", () => {
 ========================= */
 
 searchInput.addEventListener("input", () => {
-
-    const term =
-        searchInput.value.toLowerCase().trim();
+    const term = searchInput.value.toLowerCase().trim();
 
     if (term === "") {
-
         renderAllSongs(allSongs);
-
         return;
-
     }
 
     const filtered = allSongs.filter(song =>
-
         song.title.toLowerCase().includes(term) ||
         song.artist.toLowerCase().includes(term) ||
         song.album.toLowerCase().includes(term)
-
     );
 
     renderAllSongs(filtered);
-
 });
 
 /* =========================
@@ -583,11 +511,8 @@ searchInput.addEventListener("input", () => {
 ========================= */
 
 sortSelect.addEventListener("change", (e) => {
-
     currentSort = e.target.value;
-
     renderAllSongs(allSongs);
-
 });
 
 /* =========================
@@ -595,17 +520,11 @@ sortSelect.addEventListener("change", (e) => {
 ========================= */
 
 clearLibraryBtn.addEventListener("click", () => {
-
-    const transaction =
-        db.transaction("songs", "readwrite");
-
-    const store =
-        transaction.objectStore("songs");
-
+    const transaction = db.transaction("songs", "readwrite");
+    const store = transaction.objectStore("songs");
     const request = store.clear();
 
     request.onsuccess = () => {
-
         allSongs = [];
         currentSongs = [];
 
@@ -616,22 +535,17 @@ clearLibraryBtn.addEventListener("click", () => {
         albumRow.innerHTML = "";
         songRow.innerHTML = "";
 
-        currentTitle.textContent =
-            "No song playing";
-
-        currentArtist.textContent =
-            "Select music files to begin";
-
-        playerArt.src =
-            "https://via.placeholder.com/80";
+        currentTitle.textContent = "No song playing";
+        currentArtist.textContent = "Select music files to begin";
+        playerArt.src = "https://via.placeholder.com/80";
 
         audioPlayer.pause();
         audioPlayer.src = "";
 
+        setPlayingState(false);
+
         alert("Music library cleared!");
-
     };
-
 });
 
 /* =========================
@@ -639,27 +553,18 @@ clearLibraryBtn.addEventListener("click", () => {
 ========================= */
 
 playerArt.addEventListener("click", () => {
-
     nowPlayingScreen.classList.remove("hidden");
 
     npArt.src = playerArt.src;
+    npTitle.textContent = currentTitle.textContent;
+    npArtist.textContent = currentArtist.textContent;
 
-    npTitle.textContent =
-        currentTitle.textContent;
-
-    npArtist.textContent =
-        currentArtist.textContent;
-
-    document.querySelector(".np-background")
-        .style.backgroundImage =
+    document.querySelector(".np-background").style.backgroundImage =
         `url(${playerArt.src})`;
-
 });
 
 closeNowPlaying.addEventListener("click", () => {
-
     nowPlayingScreen.classList.add("hidden");
-
 });
 
 /* =========================
@@ -667,33 +572,20 @@ closeNowPlaying.addEventListener("click", () => {
 ========================= */
 
 infiniteRadioBtn.addEventListener("click", () => {
-
     if (allSongs.length === 0) {
-
         alert("Add some songs first!");
-
         return;
-
     }
 
     isInfiniteRadio = true;
-
     infiniteRadioBtn.classList.add("active");
 
-    currentSongs = [...allSongs].sort(
-        () => Math.random() - 0.5
-    );
+    currentSongs = [...allSongs].sort(() => Math.random() - 0.5);
 
-    const randomIndex =
-        Math.floor(Math.random() *
-            currentSongs.length);
-
+    const randomIndex = Math.floor(Math.random() * currentSongs.length);
     playSong(randomIndex);
 
-    document.getElementById(
-        "songSectionTitle"
-    ).textContent = "Infinite Radio";
-
+    document.getElementById("songSectionTitle").textContent = "Infinite Radio";
 });
 
 /* =========================
@@ -701,39 +593,17 @@ infiniteRadioBtn.addEventListener("click", () => {
 ========================= */
 
 audioPlayer.addEventListener("ended", () => {
+    if (isInfiniteRadio && currentSongs.length > 1) {
+        let nextIndex = Math.floor(Math.random() * currentSongs.length);
 
-    if (
-        isInfiniteRadio &&
-        currentSongs.length > 1
-    ) {
-
-        let nextIndex =
-            Math.floor(
-                Math.random() *
-                currentSongs.length
-            );
-
-        while (
-            nextIndex === currentIndex &&
-            currentSongs.length > 1
-        ) {
-
-            nextIndex =
-                Math.floor(
-                    Math.random() *
-                    currentSongs.length
-                );
-
+        while (nextIndex === currentIndex && currentSongs.length > 1) {
+            nextIndex = Math.floor(Math.random() * currentSongs.length);
         }
 
         playSong(nextIndex);
-
     } else {
-
         playSong(currentIndex + 1);
-
     }
-
 });
 
 /* =========================
@@ -741,99 +611,54 @@ audioPlayer.addEventListener("ended", () => {
 ========================= */
 
 async function fetchLyrics(song) {
-
-    const lyricsText =
-        document.getElementById("lyricsText");
-
+    const lyricsText = document.getElementById("lyricsText");
     if (!lyricsText) return;
 
-    lyricsText.textContent =
-        "Loading lyrics...";
+    lyricsText.textContent = "Loading lyrics...";
 
-    const track =
-        encodeURIComponent(song.title);
-
-    const artist =
-        encodeURIComponent(song.artist);
+    const track = encodeURIComponent(song.title);
+    const artist = encodeURIComponent(song.artist);
 
     const lrclibUrl =
         `https://lrclib.net/api/search?track_name=${track}&artist_name=${artist}`;
 
     const attempts = [
-
-        {
-            url: lrclibUrl,
-            wrapped: false
-        },
-
-        {
-            url:
-            `https://corsproxy.io/?url=${encodeURIComponent(lrclibUrl)}`,
-            wrapped: false
-        },
-
-        {
-            url:
-            `https://api.allorigins.win/get?url=${encodeURIComponent(lrclibUrl)}`,
-            wrapped: true
-        }
-
+        { url: lrclibUrl, wrapped: false },
+        { url: `https://corsproxy.io/?url=${encodeURIComponent(lrclibUrl)}`, wrapped: false },
+        { url: `https://api.allorigins.win/get?url=${encodeURIComponent(lrclibUrl)}`, wrapped: true }
     ];
 
     for (let i = 0; i < attempts.length; i++) {
-
         try {
-
-            const response =
-                await fetch(attempts[i].url);
-
+            const response = await fetch(attempts[i].url);
             if (!response.ok) continue;
 
-            let data =
-                await response.json();
+            let data = await response.json();
 
             if (attempts[i].wrapped) {
                 data = JSON.parse(data.contents);
             }
 
             if (data.length > 0) {
-
                 const lyrics =
                     data[0].plainLyrics ||
                     data[0].syncedLyrics
-                    ?.replace(
-                        /\[\d+:\d+\.\d+\]/g,
-                        ""
-                    )
-                    .trim();
+                        ?.replace(/\[\d+:\d+\.\d+\]/g, "")
+                        .trim();
 
-                lyricsText.textContent =
-                    lyrics ||
-                    "No lyrics available.";
-
+                lyricsText.textContent = lyrics || "No lyrics available.";
             } else {
-
-                lyricsText.textContent =
-                    "Lyrics not found.";
-
+                lyricsText.textContent = "Lyrics not found.";
             }
 
             return;
 
         } catch (error) {
-
-            console.warn(
-                `Attempt ${i + 1} failed:`,
-                error
-            );
-
+            console.warn(`Attempt ${i + 1} failed:`, error);
         }
-
     }
 
-    lyricsText.textContent =
-        "Failed to load lyrics.";
-
+    lyricsText.textContent = "Failed to load lyrics.";
 }
 
 /* =========================
@@ -841,4 +666,3 @@ async function fetchLyrics(song) {
 ========================= */
 
 initDB();
-
